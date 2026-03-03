@@ -968,6 +968,203 @@
       .hs-routes { display: none; }
       .toggle-btn { font-size: 0.6rem; }
     }
+
+    /* ═══════════════════════════════════════════
+       ECONOMÍA — PANEL REDISEÑADO
+    ═══════════════════════════════════════════ */
+    #panel-economy {
+      padding: 12px 14px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .eco-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .eco-cash-big {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--success);
+      letter-spacing: -.02em;
+    }
+    .eco-section { margin-bottom: 10px; }
+    .eco-section-title {
+      font-size: .68rem;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+    .eco-progress-wrap {
+      background: var(--bg-dark);
+      border-radius: 4px;
+      height: 5px;
+      margin: 4px 0 7px;
+    }
+    .eco-progress-bar {
+      height: 5px;
+      border-radius: 4px;
+      background: var(--accent);
+      transition: width .6s ease;
+    }
+    .eco-profit-line {
+      font-size: 1rem;
+      font-weight: 700;
+      margin: 6px 0 2px;
+      text-align: right;
+    }
+    .eco-profit-line.positive { color: var(--success); }
+    .eco-profit-line.negative { color: var(--danger); }
+    .eco-history-table {
+      width: 100%;
+      font-size: .75rem;
+      border-collapse: collapse;
+    }
+    .eco-history-table td { padding: 2px 4px; }
+    .history-bar {
+      height: 7px;
+      border-radius: 3px;
+      display: inline-block;
+      min-width: 2px;
+      vertical-align: middle;
+    }
+    .loan-list-item {
+      background: var(--bg-card);
+      border-radius: 6px;
+      padding: 7px 10px;
+      margin-bottom: 5px;
+      font-size: .8rem;
+    }
+    .loan-list-item .loan-name {
+      color: var(--text-muted);
+      font-size: .7rem;
+      margin-top: 2px;
+    }
+    .credit-bar-wrap {
+      height: 4px;
+      background: var(--bg-dark);
+      border-radius: 2px;
+    }
+    .credit-bar {
+      height: 4px;
+      border-radius: 2px;
+      transition: width .4s;
+    }
+    .btn-accent {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 7px 12px;
+      font-size: .8rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background .2s;
+    }
+    .btn-accent:hover { background: var(--accent-dim); }
+
+    /* ═══════════════════════════════════════════
+       MODAL PRÉSTAMOS
+    ═══════════════════════════════════════════ */
+    .loan-type-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin: 10px 0;
+    }
+    .loan-type-btn {
+      padding: 10px 6px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-card);
+      color: var(--text-dim);
+      font-size: .78rem;
+      cursor: pointer;
+      text-align: center;
+      transition: border-color .2s, background .2s;
+      line-height: 1.4;
+    }
+    .loan-type-btn:hover { border-color: var(--border-light); }
+    .loan-type-btn.active {
+      border-color: var(--accent);
+      color: var(--text);
+      background: var(--bg-hover);
+    }
+    .loan-type-btn .rate {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--accent);
+      display: block;
+      margin-bottom: 3px;
+    }
+    .loan-preview {
+      background: var(--bg-dark);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 10px 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .loan-preview .lbl { font-size: .72rem; color: var(--text-muted); margin-bottom: 2px; }
+    .loan-preview .val { font-size: .95rem; font-weight: 700; }
+
+    /* ═══════════════════════════════════════════
+       PANTALLA BANCARROTA
+    ═══════════════════════════════════════════ */
+    #screen-bankruptcy {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(ellipse at center, #1a0808 0%, #070c18 70%);
+    }
+    .bk-box {
+      text-align: center;
+      max-width: 520px;
+      padding: 40px 30px;
+      animation: fadeIn .6s ease;
+    }
+    .bk-icon { font-size: 5rem; margin-bottom: 12px; }
+    .bk-title {
+      font-size: 2.4rem;
+      font-weight: 800;
+      color: var(--danger);
+      letter-spacing: .05em;
+      margin-bottom: 8px;
+    }
+    .bk-subtitle {
+      color: var(--text-muted);
+      margin-bottom: 28px;
+      font-size: .95rem;
+    }
+    .bk-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .bk-stat-card {
+      background: var(--bg-card);
+      border-radius: 8px;
+      padding: 14px;
+      border: 1px solid var(--border);
+    }
+    .bk-stat-card .val {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .bk-stat-card .lbl {
+      font-size: .72rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+    .bk-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
   </style>
 </head>
 <body>
@@ -1192,43 +1389,76 @@
 
     <!-- Economy panel -->
     <div id="panel-economy">
-      <div class="eco-block">
-        <h4>Efectivo</h4>
-        <div class="eco-val green" id="eco-cash">$5,000,000</div>
-        <div class="eco-sub" id="eco-credit">Credit Score: 700</div>
+
+      <!-- CABECERA: CASH + BOTÓN PRÉSTAMO -->
+      <div class="eco-header">
+        <div>
+          <div class="eco-section-title">EFECTIVO DISPONIBLE</div>
+          <div class="eco-cash-big" id="eco-cash">$5,000,000</div>
+          <div class="credit-bar-wrap" style="margin-top:6px">
+            <div class="credit-bar" id="eco-credit-bar" style="width:73%;background:var(--success)"></div>
+          </div>
+          <div class="eco-sub" id="eco-credit">Credit Score: 700</div>
+        </div>
+        <button class="btn-accent" onclick="openLoanModal()" style="align-self:flex-start;white-space:nowrap">🏦 Préstamo</button>
+      </div>
+
+      <!-- MES EN CURSO -->
+      <div class="eco-section">
+        <div class="eco-section-title" id="eco-cur-day">MES EN CURSO</div>
+        <div class="eco-progress-wrap"><div class="eco-progress-bar" id="eco-month-bar" style="width:0%"></div></div>
         <div class="eco-rows">
-          <div class="eco-row"><span>Gates/mes</span><span id="eco-gates">$0</span></div>
-          <div class="eco-row"><span>Préstamos/mes</span><span id="eco-loans">$0</span></div>
+          <div class="eco-row"><span>✈ Ingresos acum.</span><span id="eco-cur-rev" style="color:var(--success)">$0</span></div>
+          <div class="eco-row"><span>⛽ Combustible</span><span id="eco-cur-fuel" style="color:var(--danger)">-$0</span></div>
+          <div class="eco-row"><span>🛬 Aeropuertos</span><span id="eco-cur-airport" style="color:var(--danger)">-$0</span></div>
+          <div class="eco-row"><span>📋 Arriendos</span><span id="eco-cur-lease" style="color:var(--danger)">-$0</span></div>
         </div>
       </div>
-      <div class="eco-block">
-        <h4>Ingresos (mes)</h4>
-        <div class="eco-val" id="eco-rev">$0</div>
-        <div class="eco-rows">
+
+      <hr style="border-color:var(--border);margin:4px 0">
+
+      <!-- ÚLTIMO MES P&L -->
+      <div class="eco-section">
+        <div class="eco-section-title" id="eco-last-month-title">ÚLTIMO MES — sin datos</div>
+        <div class="eco-rows" style="margin-bottom:4px">
           <div class="eco-row"><span>Pasajeros</span><span id="eco-rev-pax">$0</span></div>
           <div class="eco-row"><span>Subsidiarias</span><span id="eco-rev-sub">$0</span></div>
-          <div class="eco-row"><span>Cargo</span><span id="eco-rev-cargo">$0</span></div>
+          <div class="eco-row" style="font-weight:600"><span>Total ingresos</span><span id="eco-rev-total">$0</span></div>
+        </div>
+        <div class="eco-rows" style="font-size:.8rem">
+          <div class="eco-row"><span>⛽ Combustible</span><span id="eco-cost-fuel2">$0</span></div>
+          <div class="eco-row"><span>👨‍✈️ Tripulación</span><span id="eco-cost-crew2">$0</span></div>
+          <div class="eco-row"><span>🔧 Mantenimiento</span><span id="eco-cost-maint2">$0</span></div>
+          <div class="eco-row"><span>🛬 Aeropuertos</span><span id="eco-cost-airport">$0</span></div>
+          <div class="eco-row"><span>🚪 Gates</span><span id="eco-cost-gates">$0</span></div>
+          <div class="eco-row"><span>📋 Arriendos</span><span id="eco-cost-leases">$0</span></div>
+          <div class="eco-row"><span>🏦 Préstamos</span><span id="eco-cost-loans">$0</span></div>
+          <div class="eco-row"><span>🏛 Impuestos</span><span id="eco-cost-taxes">$0</span></div>
+          <div class="eco-row" style="font-weight:600"><span>Total costos</span><span id="eco-cost-total">$0</span></div>
+        </div>
+        <div class="eco-profit-line" id="eco-profit">$0</div>
+      </div>
+
+      <hr style="border-color:var(--border);margin:4px 0">
+
+      <!-- PRÉSTAMOS ACTIVOS -->
+      <div class="eco-section">
+        <div class="eco-section-title">PRÉSTAMOS ACTIVOS</div>
+        <div id="eco-loan-list">
+          <div style="color:var(--text-muted);font-size:.8rem">Sin préstamos activos</div>
         </div>
       </div>
-      <div class="eco-block">
-        <h4>Costos (mes)</h4>
-        <div class="eco-val red" id="eco-costs">$0</div>
-        <div class="eco-rows">
-          <div class="eco-row"><span>Combustible</span><span id="eco-fuel">$0</span></div>
-          <div class="eco-row"><span>Tripulación</span><span id="eco-crew">$0</span></div>
-          <div class="eco-row"><span>Mantenimiento</span><span id="eco-maint">$0</span></div>
-        </div>
+
+      <hr style="border-color:var(--border);margin:4px 0">
+
+      <!-- HISTORIAL 6 MESES -->
+      <div class="eco-section">
+        <div class="eco-section-title">HISTORIAL</div>
+        <table class="eco-history-table" id="eco-history-table">
+          <tr><td colspan="3" style="color:var(--text-muted)">Sin datos aún</td></tr>
+        </table>
       </div>
-      <div class="eco-block">
-        <h4>Valoración Empresa</h4>
-        <div class="eco-val yellow" id="eco-val">$0</div>
-        <div class="eco-sub">Valor de empresa</div>
-        <div class="eco-rows">
-          <div class="eco-row"><span>Flota</span><span id="eco-val-fleet">$0</span></div>
-          <div class="eco-row"><span>Deuda total</span><span id="eco-val-debt">$0</span></div>
-          <div class="eco-row"><span>IPO disponible</span><span id="eco-ipo">No</span></div>
-        </div>
-      </div>
+
     </div>
 
   </div><!-- end map-wrap -->
@@ -1540,10 +1770,10 @@
 ═══════════════════════════════════════════════════════════ -->
 <script src="js/data/models.js?v=41"></script>
 <script src="js/SaveSystem.js?v=2"></script>
-<script src="js/EconomyEngine.js?v=2"></script>
+<script src="js/EconomyEngine.js?v=3"></script>
 <script src="js/RouteEngine.js?v=2"></script>
 <script src="js/EventEngine.js?v=2"></script>
-<script src="js/GameManager.js?v=6"></script>
+<script src="js/GameManager.js?v=7"></script>
 <script src="js/index.js?v=2"></script>
 
 <!-- UI modules (orden de dependencia) -->
@@ -1552,8 +1782,8 @@
 <script src="js/ui/ui-map.js?v=2"></script>
 <script src="js/ui/ui-airport-panel.js?v=4"></script>
 <script src="js/ui/ui-new-route.js?v=4"></script>
-<script src="js/ui/ui-panels.js?v=6"></script>
-<script src="js/ui/ui-game.js?v=4"></script>
+<script src="js/ui/ui-panels.js?v=7"></script>
+<script src="js/ui/ui-game.js?v=5"></script>
 <script src="js/ui/ui-planner.js?v=4"></script>
 
 <script>
@@ -1563,6 +1793,86 @@
 // ═══════════════════════════════════════════════════════════════
 
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PANTALLA: BANCARROTA
+═══════════════════════════════════════════════════════════ -->
+<div id="screen-bankruptcy" class="screen">
+  <div class="bk-box">
+    <div class="bk-icon">💸</div>
+    <div class="bk-title">BANCARROTA</div>
+    <div class="bk-subtitle">Tu aerolínea se quedó sin fondos y tuvo que cesar operaciones.</div>
+    <div class="bk-stats" id="bk-stats"></div>
+    <div class="bk-actions">
+      <button class="btn-primary" onclick="location.reload()">🔄 Intentar de nuevo</button>
+      <button class="btn-secondary" onclick="document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-main').classList.add('active')">🏠 Menú principal</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL: SOLICITAR PRÉSTAMO
+═══════════════════════════════════════════════════════════ -->
+<div id="modal-loan" class="modal-overlay" style="display:none">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">🏦 Solicitar Préstamo</div>
+        <div class="modal-subtitle">Banco SkyLine Financial</div>
+      </div>
+      <button class="close-btn" onclick="closeLoanModal()">✕</button>
+    </div>
+
+    <!-- Credit Score -->
+    <div class="eco-rows" style="margin-bottom:4px">
+      <span style="font-size:.8rem;color:var(--text-muted)">Credit Score</span>
+      <span id="loan-score" style="font-weight:700">700</span>
+    </div>
+    <div class="credit-bar-wrap"><div class="credit-bar" id="loan-score-bar"></div></div>
+
+    <!-- Tipo de préstamo -->
+    <div class="eco-section-title" style="margin-top:12px">TIPO DE PRÉSTAMO</div>
+    <div class="loan-type-grid">
+      <div class="loan-type-btn active" onclick="selectLoanType('ShortTerm',this)">
+        <span class="rate">12%</span>Corto plazo<br><small style="color:var(--text-muted)">máx $5M · 12m</small>
+      </div>
+      <div class="loan-type-btn" onclick="selectLoanType('FleetFinancing',this)">
+        <span class="rate">7%</span>Flota<br><small style="color:var(--text-muted)">máx $500M · 60m</small>
+      </div>
+      <div class="loan-type-btn" onclick="selectLoanType('CreditLine',this)">
+        <span class="rate">15%</span>Línea crédito<br><small style="color:var(--text-muted)">máx $10M · 6m</small>
+      </div>
+    </div>
+
+    <!-- Monto y plazo -->
+    <div class="form-row" style="margin:12px 0 8px">
+      <div class="form-group">
+        <label>Monto ($)</label>
+        <input type="number" id="loan-amount" min="100000" step="100000" value="1000000"
+               oninput="updateLoanPreview()">
+      </div>
+      <div class="form-group">
+        <label>Plazo (meses)</label>
+        <input type="number" id="loan-term" min="1" max="12" value="12"
+               oninput="updateLoanPreview()">
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="loan-preview">
+      <div><div class="lbl">Cuota mensual</div><div class="val" id="loan-preview-payment">—</div></div>
+      <div><div class="lbl">Total a pagar</div><div class="val" id="loan-preview-total">—</div></div>
+      <div><div class="lbl">Intereses</div><div class="val" id="loan-preview-interest">—</div></div>
+      <div><div class="lbl">Tasa efectiva/año</div><div class="val" id="loan-preview-rate">—</div></div>
+    </div>
+
+    <!-- Botones -->
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeLoanModal()">Cancelar</button>
+      <button class="btn-primary" onclick="confirmLoan()">✓ Solicitar</button>
+    </div>
+  </div>
+</div>
 
 <!-- PWA — Service Worker -->
 <script>

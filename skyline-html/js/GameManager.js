@@ -15,7 +15,8 @@ const GameState = Object.freeze({
     Paused:        'Paused',
     MonthlyReport: 'MonthlyReport',
     GameOver:      'GameOver',
-    Victory:       'Victory'
+    Victory:       'Victory',
+    Bankruptcy:    'Bankruptcy'
 });
 
 const GameSpeed = Object.freeze({
@@ -188,6 +189,7 @@ class GameManager {
         this._monthlyCrewCost        = 0;
         this._monthlyMaintenanceCost = 0;
         this._monthlyAirportFees     = 0;
+        this._monthlyLeaseCost       = 0;
 
         // Referencias a otros motores
         this._economy = null;  // Se asigna externamente: GameManager.instance.economy = EconomyEngine.instance
@@ -226,6 +228,21 @@ class GameManager {
     set economy(e)     { this._economy = e; }
     /** Hora del día en juego (0–23), derivada del progreso del tick actual */
     get currentHour()  { return Math.floor((this._dayTimer / Math.max(1, this._dayDuration)) * 24); }
+
+    /** Snapshot del mes en curso para el panel de economía */
+    get currentMonthSnapshot() {
+        const daysInMonth = this._currentDate.daysInMonth?.() ?? 30;
+        const dayOfMonth  = this._currentDate.day ?? 1;
+        return {
+            revenue:     this._monthlyFlightRevenue,
+            fuelCost:    this._monthlyFuelCost,
+            airportFees: this._monthlyAirportFees,
+            leaseCost:   this._monthlyLeaseCost,
+            dayOfMonth,
+            daysInMonth,
+            progress: dayOfMonth / daysInMonth,
+        };
+    }
 
     // ─────────────────────────────────────────────────────────
     //  EVENTOS (Observer pattern, reemplaza C# events)
@@ -458,6 +475,11 @@ class GameManager {
                 this._monthlyMaintenanceCost += this._economy.calculateMaintenanceCost(data.family, plane.ageYears);
         });
 
+        // Costo mensual de arriendos (leases)
+        this._monthlyLeaseCost = this._fleet
+            .filter(p => p.isLeased)
+            .reduce((sum, p) => sum + (p.monthlyLeaseCost ?? 0), 0);
+
         const closingMonth = this._currentDate.month === 1 ? 12 : this._currentDate.month - 1;
         const closingYear  = this._currentDate.month === 1 ? this._currentDate.year - 1 : this._currentDate.year;
 
@@ -469,7 +491,8 @@ class GameManager {
                 this._monthlyFuelCost,
                 this._monthlyCrewCost,
                 this._monthlyMaintenanceCost,
-                this._monthlyAirportFees
+                this._monthlyAirportFees,
+                this._monthlyLeaseCost
             );
         }
 
@@ -482,12 +505,35 @@ class GameManager {
 
         this._resetMonthlyAccumulators();
 
+        // ── Chequeo de bancarrota ──
+        if (this._economy && this._economy.cash <= 0) {
+            console.warn('[GameManager] 💸 BANCARROTA — La aerolínea se quedó sin fondos.');
+            this.setGameState(GameState.Bankruptcy);
+            return;
+        }
+
         if (this._economy?.isInFinancialDistress()) {
             console.warn('[GameManager] ⚠️ ALERTA FINANCIERA — Reservas de efectivo críticas.');
         }
 
         this.setGameState(GameState.MonthlyReport);
         console.log(`[GameManager] Cierre de mes: ${closingMonth}/${closingYear}`);
+    }
+
+    /** Estadísticas para la pantalla de bancarrota */
+    getBankruptcyStats() {
+        const history = this._economy?._balanceHistory ?? [];
+        const peakProfit = history.length
+            ? Math.max(...history.map(b => b.netProfit)) : 0;
+        return {
+            airlineName:    this._airline?.name ?? 'Tu aerolínea',
+            hubCode:        this._airline?.hubAirports?.[0] ?? '—',
+            monthsOperated: history.length,
+            totalRoutes:    this._routes.length,
+            fleetSize:      this._fleet.length,
+            peakProfit,
+            reputation:     Math.round(this._airline?.reputation ?? 0),
+        };
     }
 
     _handleNewYear() {
@@ -506,6 +552,7 @@ class GameManager {
         this._monthlyCrewCost        = 0;
         this._monthlyMaintenanceCost = 0;
         this._monthlyAirportFees     = 0;
+        this._monthlyLeaseCost       = 0;
     }
 
     // ─────────────────────────────────────────────────────────

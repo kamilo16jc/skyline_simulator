@@ -306,6 +306,10 @@ function subscribeToEvents() {
   g.on('onGameStateChanged', state => {
     if (state === 'MonthlyReport') showMonthlyReport();
     if (state === 'Playing')       closeMonthlyReport();
+    if (state === 'Bankruptcy') {
+      const stats = g.getBankruptcyStats?.() ?? {};
+      showBankruptcyScreen(stats);
+    }
   });
 
   ec.on('onCashChanged', () => updateHUDCash());
@@ -333,6 +337,6 @@ function subscribeToEvents() {
   ev.on('onEventResolved',  result =>
     showToast(result.messageES, result.success ? 'success' : 'warning'));
 
-  ec.on('onLoanApproved',  loan => showToast(`Préstamo aprobado: $${loan.principal.toLocaleString()}`, 'success'));
-  ec.on('onLoanDefaulted', ()   => showToast('⚠ DEFAULT en préstamo. Reputación penalizada.', 'danger'));
+  // onLoanApproved: el toast lo muestra confirmLoan() con más detalle; evitar duplicado
+  ec.on('onLoanDefaulted', () => showToast('⚠ DEFAULT en préstamo. Credit score penalizado.', 'danger'));
 }

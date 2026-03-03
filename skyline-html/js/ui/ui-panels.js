@@ -411,33 +411,187 @@ function buyAircraft(aircraftId, isLease) {
 // ─────────────────────────────────────────────────────────────
 //  ECONOMY PANEL
 // ─────────────────────────────────────────────────────────────
+const _ECO_MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+function _fmt(n)  { return '$' + Math.round(n ?? 0).toLocaleString(); }
+function _fmtN(n) { return (n >= 0 ? '+$' : '-$') + Math.abs(Math.round(n ?? 0)).toLocaleString(); }
+
 function updateEconomyPanel() {
-  const ec  = SkyLine.economy;
-  const val = ec?.valuation;
-  const lb  = ec?.getLastBalance();
+  const ec   = SkyLine.economy;
+  const g    = SkyLine.game;
+  const lb   = ec?.getLastBalance();
+  const snap = g?.currentMonthSnapshot;
+  const score = ec?.creditScore ?? 700;
 
-  document.getElementById('eco-cash').textContent   = '$' + (ec?.cash ?? 0).toLocaleString();
-  document.getElementById('eco-credit').textContent = 'Credit Score: ' + (ec?.creditScore ?? 700);
-  document.getElementById('eco-gates').textContent  = '$' + (ec?.getMonthlyGateCost() ?? 0).toLocaleString();
-  document.getElementById('eco-loans').textContent  = '$' + (
-    (ec?.loans ?? []).filter(l => l.status === 'Active').reduce((s, l) => s + l.monthlyPayment, 0)
-  ).toLocaleString();
-
-  if (lb) {
-    document.getElementById('eco-rev').textContent       = '$' + lb.totalRevenue.toLocaleString();
-    document.getElementById('eco-rev-pax').textContent   = '$' + lb.revenuePassengers.toLocaleString();
-    document.getElementById('eco-rev-sub').textContent   = '$' + lb.revenueSubsidiaries.toLocaleString();
-    document.getElementById('eco-rev-cargo').textContent = '$' + lb.revenueCargo.toLocaleString();
-    document.getElementById('eco-costs').textContent     = '$' + lb.totalCosts.toLocaleString();
-    document.getElementById('eco-fuel').textContent      = '$' + lb.costFuel.toLocaleString();
-    document.getElementById('eco-crew').textContent      = '$' + lb.costCrew.toLocaleString();
-    document.getElementById('eco-maint').textContent     = '$' + lb.costMaintenance.toLocaleString();
+  // ── Cash y credit score ──
+  document.getElementById('eco-cash').textContent   = _fmt(ec?.cash ?? 0);
+  document.getElementById('eco-credit').textContent = 'Credit Score: ' + score;
+  const barPct = ((score - 300) / 550 * 100).toFixed(0);
+  const barEl  = document.getElementById('eco-credit-bar');
+  if (barEl) {
+    barEl.style.width      = barPct + '%';
+    barEl.style.background = score >= 700 ? 'var(--success)' : score >= 500 ? 'var(--warning)' : 'var(--danger)';
   }
 
-  document.getElementById('eco-val').textContent       = '$' + (val?.enterpriseValue ?? 0).toLocaleString();
-  document.getElementById('eco-val-fleet').textContent = '$' + (val?.fleetValue ?? 0).toLocaleString();
-  document.getElementById('eco-val-debt').textContent  = '$' + (val?.totalDebt ?? 0).toLocaleString();
-  document.getElementById('eco-ipo').textContent       = val?.canIPO ? '¡Disponible!' : 'No (necesitas $500M)';
+  // ── Mes en curso ──
+  if (snap) {
+    const pct = Math.min(100, snap.progress * 100).toFixed(0);
+    document.getElementById('eco-month-bar').style.width   = pct + '%';
+    document.getElementById('eco-cur-day').textContent     = `MES EN CURSO — DÍA ${snap.dayOfMonth} / ${snap.daysInMonth}`;
+    document.getElementById('eco-cur-rev').textContent     = _fmt(snap.revenue);
+    document.getElementById('eco-cur-fuel').textContent    = '-' + _fmt(snap.fuelCost);
+    document.getElementById('eco-cur-airport').textContent = '-' + _fmt(snap.airportFees);
+    document.getElementById('eco-cur-lease').textContent   = '-' + _fmt(snap.leaseCost);
+  }
+
+  // ── Último mes P&L ──
+  if (lb) {
+    document.getElementById('eco-last-month-title').textContent =
+      `ÚLTIMO MES — ${_ECO_MONTHS[(lb.month - 1) % 12]} ${lb.year}`;
+    document.getElementById('eco-rev-pax').textContent      = _fmt(lb.revenuePassengers);
+    document.getElementById('eco-rev-sub').textContent      = _fmt(lb.revenueSubsidiaries);
+    document.getElementById('eco-rev-total').textContent    = _fmt(lb.totalRevenue);
+    document.getElementById('eco-cost-fuel2').textContent   = _fmt(lb.costFuel);
+    document.getElementById('eco-cost-crew2').textContent   = _fmt(lb.costCrew);
+    document.getElementById('eco-cost-maint2').textContent  = _fmt(lb.costMaintenance);
+    document.getElementById('eco-cost-airport').textContent = _fmt(lb.costAirportFees);
+    document.getElementById('eco-cost-gates').textContent   = _fmt(lb.costGates);
+    document.getElementById('eco-cost-leases').textContent  = _fmt(lb.costOther);
+    document.getElementById('eco-cost-loans').textContent   = _fmt(lb.costLoanPayments);
+    document.getElementById('eco-cost-taxes').textContent   = _fmt(lb.costTaxes);
+    document.getElementById('eco-cost-total').textContent   = _fmt(lb.totalCosts);
+    const profitEl = document.getElementById('eco-profit');
+    profitEl.textContent = _fmtN(lb.netProfit);
+    profitEl.className   = 'eco-profit-line ' + (lb.netProfit >= 0 ? 'positive' : 'negative');
+  }
+
+  // ── Préstamos activos ──
+  const loans    = ec?.getActiveLoansSummary?.() ?? [];
+  const loanList = document.getElementById('eco-loan-list');
+  if (loanList) {
+    const loanLabels = { FleetFinancing: '✈ Flota', ShortTerm: '⚡ Corto plazo', CreditLine: '💳 Línea crédito' };
+    loanList.innerHTML = loans.length
+      ? loans.map(l => `
+          <div class="loan-list-item">
+            <div class="eco-row">
+              <span>${loanLabels[l.type] ?? l.type} · ${l.monthsRemaining} meses restantes</span>
+              <span style="color:var(--danger)">${_fmt(l.monthlyPayment)}/mes</span>
+            </div>
+            <div class="loan-name">Saldo: ${_fmt(l.remainingBalance)} · ${l.purpose || '—'}</div>
+          </div>`).join('')
+      : '<div style="color:var(--text-muted);font-size:.8rem">Sin préstamos activos</div>';
+  }
+
+  // ── Historial 6 meses ──
+  const history   = ec?._balanceHistory?.slice(-6) ?? [];
+  const histTable = document.getElementById('eco-history-table');
+  if (histTable) {
+    if (!history.length) {
+      histTable.innerHTML = '<tr><td colspan="3" style="color:var(--text-muted)">Sin datos aún</td></tr>';
+    } else {
+      const maxAbs = Math.max(...history.map(b => Math.abs(b.netProfit)), 1);
+      histTable.innerHTML = history.map(b => {
+        const barW  = Math.round((Math.abs(b.netProfit) / maxAbs) * 75);
+        const color = b.netProfit >= 0 ? 'var(--success)' : 'var(--danger)';
+        return `<tr>
+          <td style="white-space:nowrap">${_ECO_MONTHS[(b.month-1)%12]} ${b.year}</td>
+          <td><div class="history-bar" style="width:${barW}px;background:${color}"></div></td>
+          <td style="color:${color};text-align:right">${b.netProfit>=0?'+':'-'}$${Math.abs(Math.round(b.netProfit/1000))}k</td>
+        </tr>`;
+      }).join('');
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  MODAL PRÉSTAMOS
+// ─────────────────────────────────────────────────────────────
+let _loanSelectedType = 'ShortTerm';
+
+function openLoanModal() {
+  const ec    = SkyLine.economy;
+  const score = ec?.creditScore ?? 700;
+  document.getElementById('loan-score').textContent = score;
+  const bar = document.getElementById('loan-score-bar');
+  const pct = ((score - 300) / 550 * 100).toFixed(0);
+  bar.style.width      = pct + '%';
+  bar.style.background = score >= 700 ? 'var(--success)' : score >= 500 ? 'var(--warning)' : 'var(--danger)';
+  _loanSelectedType = 'ShortTerm';
+  document.querySelectorAll('.loan-type-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
+  document.getElementById('loan-term').max   = 12;
+  document.getElementById('loan-term').value = 12;
+  updateLoanPreview();
+  document.getElementById('modal-loan').style.display = 'flex';
+}
+
+function closeLoanModal() {
+  document.getElementById('modal-loan').style.display = 'none';
+}
+
+function selectLoanType(type, el) {
+  _loanSelectedType = type;
+  document.querySelectorAll('.loan-type-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  const maxTerms  = { ShortTerm: 12, FleetFinancing: 60, CreditLine: 6 };
+  const termInput = document.getElementById('loan-term');
+  termInput.max   = maxTerms[type] ?? 12;
+  termInput.value = Math.min(+termInput.value, maxTerms[type] ?? 12);
+  updateLoanPreview();
+}
+
+function updateLoanPreview() {
+  const amount  = +document.getElementById('loan-amount').value || 0;
+  const term    = +document.getElementById('loan-term').value   || 1;
+  const payment = SkyLine.economy?.previewLoanPayment?.(_loanSelectedType, amount, term) ?? 0;
+  const total   = payment * term;
+  const interest = total - amount;
+  const effRate  = amount > 0 ? ((interest / amount) * (12 / term) * 100).toFixed(1) + '%' : '—';
+  document.getElementById('loan-preview-payment').textContent  = _fmt(payment);
+  document.getElementById('loan-preview-total').textContent    = _fmt(total);
+  document.getElementById('loan-preview-interest').textContent = _fmt(interest);
+  document.getElementById('loan-preview-rate').textContent     = effRate;
+}
+
+function confirmLoan() {
+  const amount = +document.getElementById('loan-amount').value || 0;
+  const term   = +document.getElementById('loan-term').value   || 1;
+  const loan   = SkyLine.economy?.requestLoan?.(_loanSelectedType, amount, term, 'Solicitado desde panel');
+  if (loan) {
+    showToast(`Préstamo aprobado: ${_fmt(amount)} — Cuota: ${_fmt(loan.monthlyPayment)}/mes`, 'success');
+    closeLoanModal();
+    updateEconomyPanel();
+    updateHUDCash();
+  } else {
+    showToast('Préstamo denegado. Revisa tu credit score o el monto solicitado.', 'danger');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  PANTALLA BANCARROTA
+// ─────────────────────────────────────────────────────────────
+function showBankruptcyScreen(stats) {
+  document.getElementById('bk-stats').innerHTML = `
+    <div class="bk-stat-card">
+      <div class="val">${stats.monthsOperated ?? 0}</div>
+      <div class="lbl">Meses operados</div>
+    </div>
+    <div class="bk-stat-card">
+      <div class="val">${stats.totalRoutes ?? 0}</div>
+      <div class="lbl">Rutas creadas</div>
+    </div>
+    <div class="bk-stat-card">
+      <div class="val">${stats.fleetSize ?? 0}</div>
+      <div class="lbl">Aviones en flota</div>
+    </div>
+    <div class="bk-stat-card">
+      <div class="val">${stats.reputation ?? 0}</div>
+      <div class="lbl">Reputación final</div>
+    </div>
+    <div class="bk-stat-card" style="grid-column:1/-1">
+      <div class="val">${(stats.peakProfit ?? 0) >= 0 ? '+$' : '-$'}${Math.abs(Math.round((stats.peakProfit ?? 0) / 1000))}k</div>
+      <div class="lbl">Mejor mes de beneficio</div>
+    </div>`;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-bankruptcy').classList.add('active');
 }
 
 // ─────────────────────────────────────────────────────────────

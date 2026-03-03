@@ -586,7 +586,7 @@ class EconomyEngine {
     // ─────────────────────────────────────────────────────────
 
     closeMonth(year, month, flightRevenue, cargoRevenue,
-               fuelCost, crewCost, maintenanceCost, airportFees) {
+               fuelCost, crewCost, maintenanceCost, airportFees, leaseCost = 0) {
         const balance = new MonthlyBalance();
         balance.year   = year;
         balance.month  = month;
@@ -600,6 +600,7 @@ class EconomyEngine {
         balance.costMaintenance  = maintenanceCost;
         balance.costAirportFees  = airportFees;
         balance.costGates        = this.getMonthlyGateCost();
+        balance.costOther        = leaseCost;   // Arriendos de aeronaves
         balance.costLoanPayments = this.processLoanPayments();
 
         if (balance.netProfit > 0)
@@ -667,6 +668,34 @@ class EconomyEngine {
     calculateRASK(totalRevenue, totalSeatsAvailable, totalKmFlown) {
         if (totalSeatsAvailable <= 0 || totalKmFlown <= 0) return 0;
         return totalRevenue / (totalSeatsAvailable * totalKmFlown);
+    }
+
+    // ─────────────────────────────────────────────────────────
+    //  HELPERS DE PRÉSTAMOS
+    // ─────────────────────────────────────────────────────────
+
+    /** Calcula la cuota mensual de un préstamo hipotético (sin crearlo) */
+    previewLoanPayment(type, amount, termMonths) {
+        let rate = this._loanRates[type] ?? 0.12;
+        if (this._creditScore < 600)  rate += 0.03;
+        else if (this._creditScore > 750) rate -= 0.01;
+        const r = rate / 12;
+        if (r === 0 || termMonths <= 0) return amount / Math.max(1, termMonths);
+        return amount * (r * Math.pow(1 + r, termMonths)) / (Math.pow(1 + r, termMonths) - 1);
+    }
+
+    /** Resumen de préstamos activos para el panel de economía */
+    getActiveLoansSummary() {
+        return this._loans
+            .filter(l => l.status === LoanStatus.Active)
+            .map(l => ({
+                id:               l.loanId,
+                type:             l.type,
+                monthlyPayment:   l.monthlyPayment,
+                remainingBalance: l.remainingBalance,
+                monthsRemaining:  l.monthsRemaining,
+                purpose:          l.purpose,
+            }));
     }
 
     // ─────────────────────────────────────────────────────────
