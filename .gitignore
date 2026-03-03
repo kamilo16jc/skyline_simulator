@@ -1,0 +1,7 @@
+# Claude Code internals
+.claude/
+
+# Node / OS
+node_modules/
+.DS_Store
+Thumbs.db
