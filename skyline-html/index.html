@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SkyLine — Airline Simulator</title>
+
+  <!-- Leaflet (mapa mundial) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet MarkerCluster — agrupa los 1103 marcadores automáticamente -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <style>
+    /* ═══════════════════════════════════════════
+       RESET & BASE
+    ═══════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-dark:    #070c18;
+      --bg-panel:   #0d1525;
+      --bg-card:    #131e33;
+      --bg-hover:   #1a2940;
+      --accent:     #1e7de6;
+      --accent-dim: #1258a8;
+      --accent-glow:#3399ff44;
+      --success:    #22c55e;
+      --warning:    #f59e0b;
+      --danger:     #ef4444;
+      --text:       #e2e8f0;
+      --text-muted: #64748b;
+      --text-dim:   #94a3b8;
+      --border:     #1e2d45;
+      --border-light:#2a3d5a;
+      --gold:       #f59e0b;
+      --panel-w:    340px;
+      --hud-h:      52px;
+      --transition: 0.25s ease;
+    }
+
+    html, body {
+      height: 100%; width: 100%; overflow: hidden;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text);
+    }
+
+    /* ═══════════════════════════════════════════
+       SCROLLBAR
+    ═══════════════════════════════════════════ */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg-panel); }
+    ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+
+    /* ═══════════════════════════════════════════
+       SCREENS
+    ═══════════════════════════════════════════ */
+    .screen { display: none; position: fixed; inset: 0; z-index: 100; }
+    .screen.active { display: flex; }
+
+    /* ─── MAIN MENU ─── */
+    #screen-menu {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(ellipse at 50% 30%, #0d1e3d 0%, #070c18 70%);
+    }
+
+    .menu-logo {
+      font-size: 4rem;
+      font-weight: 900;
+      letter-spacing: -2px;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .menu-logo span { color: var(--accent); }
+
+    .menu-tagline {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 48px;
+    }
+
+    .menu-btn {
+      display: block; width: 260px; padding: 14px 0;
+      margin-bottom: 14px; border-radius: 8px;
+      border: 1px solid var(--border-light);
+      background: var(--bg-card);
+      color: var(--text); font-size: 1rem; font-weight: 600;
+      cursor: pointer; text-align: center;
+      transition: var(--transition);
+      letter-spacing: 0.5px;
+    }
+    .menu-btn:hover { background: var(--bg-hover); border-color: var(--accent); color: #fff; }
+    .menu-btn.primary { background: var(--accent); border-color: var(--accent); }
+    .menu-btn.primary:hover { background: #2589f0; }
+    .menu-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .menu-version { position: absolute; bottom: 18px; color: var(--text-muted); font-size: 0.75rem; }
+
+    .menu-stars {
+      position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+    }
+    .star {
+      position: absolute; background: white; border-radius: 50%;
+      animation: twinkle 3s infinite alternate;
+    }
+    @keyframes twinkle { from { opacity: 0.2; } to { opacity: 0.8; } }
+
+    /* ─── NEW GAME SCREEN ─── */
+    #screen-newgame {
+      align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at 50% 30%, #0d1e3d 0%, #070c18 70%);
+    }
+
+    .form-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 36px 40px;
+      width: 480px;
+      max-width: 95vw;
+    }
+
+    .form-card h2 {
+      font-size: 1.4rem; font-weight: 700;
+      margin-bottom: 6px; color: #fff;
+    }
+    .form-card .subtitle { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 28px; }
+
+    .form-group { margin-bottom: 18px; }
+    .form-group label { display: block; font-size: 0.8rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-dim);
+      margin-bottom: 7px; }
+    .form-group input, .form-group select {
+      width: 100%; padding: 11px 14px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 7px; color: var(--text); font-size: 0.95rem;
+      outline: none; transition: var(--transition);
+    }
+    .form-group input:focus, .form-group select:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    .form-group select option { background: var(--bg-card); }
+
+    .form-row { display: flex; gap: 14px; }
+    .form-row .form-group { flex: 1; }
+
+    /* Mode cards — Tycoon / Realista */
+    .mode-cards {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    }
+    .mode-card {
+      padding: 18px 14px; border-radius: 10px;
+      border: 2px solid var(--border); background: var(--bg-card);
+      cursor: pointer; text-align: center;
+      transition: var(--transition);
+    }
+    .mode-card:hover { border-color: var(--border-light); }
+    .mode-card.selected { border-color: var(--accent); background: #0d2147; }
+    .mode-icon { font-size: 2rem; margin-bottom: 8px; }
+    .mode-name { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 6px; }
+    .mode-desc { font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; }
+    .mode-card.selected .mode-desc { color: var(--text-dim); }
+
+    /* Hub selector — pantalla nueva partida */
+    .ng-hub-wrap  { position: relative; }
+    .ng-hub-dropdown {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 200;
+      background: var(--bg-panel); border: 1px solid var(--accent);
+      border-radius: 9px; max-height: 200px; overflow-y: auto; display: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    .ng-hub-item {
+      padding: 9px 14px; cursor: pointer; display: flex; align-items: center; gap: 12px;
+      transition: background 0.1s; border-bottom: 1px solid var(--border);
+    }
+    .ng-hub-item:last-child { border-bottom: none; }
+    .ng-hub-item:hover { background: var(--bg-hover); }
+    .ng-hub-item-iata { font-weight: 800; color: var(--accent); font-size: 0.95rem; min-width: 38px; }
+    .ng-hub-item-city { font-size: 0.75rem; color: var(--text); }
+    .ng-hub-item-cls  { font-size: 0.6rem; color: var(--text-muted); }
+    .ng-hub-badge {
+      margin-top: 9px; display: none; align-items: center; gap: 10px;
+      background: rgba(30,125,230,0.14); border: 1px solid var(--accent);
+      border-radius: 8px; padding: 9px 14px;
+    }
+    .ng-hub-badge-iata { font-weight: 800; color: var(--accent); font-size: 1.1rem; }
+    .ng-hub-badge-info { font-size: 0.72rem; color: var(--text-muted); line-height: 1.4; }
+    .ng-hub-badge-clear { margin-left: auto; background: none; border: none;
+      color: var(--text-muted); cursor: pointer; font-size: 1.1rem; padding: 0; }
+    .ng-hub-badge-clear:hover { color: var(--danger); }
+
+    /* Hub chips en HUD (múltiples hubs) */
+    .hub-chip {
+      display: inline-block; background: var(--accent); color: #fff;
+      padding: 1px 8px; border-radius: 4px; font-size: 0.75rem;
+      font-weight: 800; letter-spacing: 0.05em; margin-left: 2px;
+    }
+
+    .iata-preview {
+      margin-top: 6px; font-size: 0.78rem; color: var(--text-muted);
+    }
+    .iata-preview span { color: var(--accent); font-weight: 700; font-family: monospace; font-size: 0.85rem; }
+
+    .form-actions { display: flex; gap: 10px; margin-top: 28px; }
+    .btn { padding: 12px 22px; border-radius: 7px; border: 1px solid var(--border);
+      font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: var(--transition); }
+    .btn-ghost { background: transparent; color: var(--text-muted); }
+    .btn-ghost:hover { background: var(--bg-hover); color: var(--text); }
+    .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; flex: 1; }
+    .btn-primary:hover { background: #2589f0; }
+
+    /* ═══════════════════════════════════════════
+       GAME SCREEN
+    ═══════════════════════════════════════════ */
+    #screen-game {
+      flex-direction: column;
+      background: var(--bg-dark);
+    }
+
+    /* ─── HUD (barra superior) ─── */
+    #hud {
+      display: flex; align-items: center; gap: 0;
+      height: var(--hud-h);
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      padding: 0 14px;
+      z-index: 1100; flex-shrink: 0;
+      user-select: none;
+    }
+
+    .hud-brand {
+      font-size: 1.1rem; font-weight: 900; letter-spacing: -0.5px;
+      color: #fff; padding-right: 16px;
+      border-right: 1px solid var(--border);
+      margin-right: 16px;
+      white-space: nowrap;
+    }
+    .hud-brand span { color: var(--accent); }
+
+    .hud-stat {
+      display: flex; flex-direction: column; align-items: flex-start;
+      padding: 0 14px;
+      border-right: 1px solid var(--border);
+    }
+    .hud-stat:last-of-type { border-right: none; }
+    .hud-label { font-size: 0.6rem; text-transform: uppercase;
+      letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 1px; }
+    .hud-value { font-size: 0.85rem; font-weight: 700; color: var(--text); }
+    .hud-value.cash  { color: #4ade80; }
+    .hud-value.rep   { color: var(--gold); }
+    .hud-value.season{ color: #60a5fa; }
+
+    .hud-spacer { flex: 1; }
+
+    /* Speed controls */
+    .speed-controls { display: flex; gap: 4px; align-items: center; }
+    .speed-btn {
+      width: 34px; height: 30px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--bg-card);
+      color: var(--text-muted); cursor: pointer;
+      font-size: 0.75rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      transition: var(--transition);
+    }
+    .speed-btn:hover { background: var(--bg-hover); color: var(--text); }
+    .speed-btn.active { background: var(--accent); border-color: var(--accent);
+      color: #fff; }
+
+    /* Panel toggles */
+    .panel-toggles { display: flex; gap: 4px; margin-left: 12px;
+      padding-left: 12px; border-left: 1px solid var(--border); }
+    .toggle-btn {
+      height: 30px; padding: 0 12px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--bg-card);
+      color: var(--text-muted); cursor: pointer; font-size: 0.78rem; font-weight: 600;
+      transition: var(--transition); white-space: nowrap;
+    }
+    .toggle-btn:hover { background: var(--bg-hover); color: var(--text); }
+    .toggle-btn.active { background: var(--accent-dim); border-color: var(--accent); color: #fff; }
+
+    /* ─── MAP AREA ─── */
+    #map-wrap {
+      position: relative; flex: 1; overflow: hidden;
+    }
+
+    #map {
+      position: absolute; inset: 0;
+      background: #e8e8e8;
+      z-index: 1;
+      isolation: isolate;
+    }
+
+    /* Leaflet overrides */
+    .leaflet-control-attribution { display: none !important; }
+    .leaflet-bar a { background: var(--bg-panel) !important;
+      color: var(--text) !important; border-color: var(--border) !important; }
+    .leaflet-bar a:hover { background: var(--bg-hover) !important; }
+
+    /* Airport dot custom marker */
+    .airport-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #1e3a5f;
+      border: 1.5px solid #4a7ab5;
+      cursor: pointer; transition: transform 0.15s;
+      box-shadow: 0 0 4px rgba(30,58,95,0.4);
+    }
+    .airport-dot:hover { transform: scale(1.8); }
+    .airport-dot.hub     { background: #16a34a; border-color: #22c55e;
+      box-shadow: 0 0 8px #22c55e88; width: 12px; height: 12px; }
+    .airport-dot.route   { background: #2563eb; border-color: #3b82f6;
+      box-shadow: 0 0 6px #3b82f688; }
+    .airport-dot.selected{ background: #d97706; border-color: #f59e0b;
+      box-shadow: 0 0 10px #f59e0b88; transform: scale(1.6); }
+    /* Aeropuertos bloqueados — más pequeños y con menor opacidad */
+    .airport-dot.locked  { width: 5px; height: 5px;
+      background: #64748b; border-color: #94a3b8; opacity: 0.75;
+      box-shadow: none; }
+    .airport-dot.locked:hover { transform: scale(1.8); opacity: 1; cursor: pointer; }
+
+    /* MarkerCluster personalizado */
+    .marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div {
+      background: rgba(30,58,95,0.85); color: #e2e8f0;
+      font-weight: 700; font-size: 0.72rem;
+    }
+    .marker-cluster-small  { background: rgba(30,58,95,0.4); }
+    .marker-cluster-medium { background: rgba(37,99,235,0.4); }
+    .marker-cluster-large  { background: rgba(220,38,38,0.4); }
+
+    /* Route lines are SVG via Leaflet Polyline */
+
+    /* ─── LEFT SIDE PANEL ─── */
+    #panel-left {
+      position: absolute; left: 0; top: 0; bottom: 0;
+      width: var(--panel-w);
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      transform: translateX(-100%);
+      transition: transform var(--transition);
+      z-index: 1000;
+    }
+    #panel-left.open { transform: translateX(0); }
+
+    .panel-tabs {
+      display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .panel-tab {
+      flex: 1; padding: 12px 6px; text-align: center; font-size: 0.78rem;
+      font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px;
+      color: var(--text-muted); cursor: pointer; transition: var(--transition);
+      border-bottom: 2px solid transparent;
+    }
+    .panel-tab:hover { color: var(--text); }
+    .panel-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .panel-body {
+      flex: 1; overflow-y: auto; padding: 14px;
+    }
+    .panel-section { display: none; }
+    .panel-section.active { display: block; }
+
+    /* ─── RIGHT PANEL: Airport Info ─── */
+    #panel-airport {
+      position: absolute; right: 0; top: 0; bottom: 0;
+      width: 300px;
+      background: var(--bg-panel);
+      border-left: 1px solid var(--border);
+      transform: translateX(100%);
+      transition: transform var(--transition);
+      z-index: 1000;
+      display: flex; flex-direction: column;
+    }
+    #panel-airport.open { transform: translateX(0); }
+
+    .apt-header {
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; justify-content: space-between;
+    }
+    .apt-iata {
+      font-size: 2.2rem; font-weight: 900; color: var(--accent);
+      line-height: 1;
+    }
+    .apt-class-badge {
+      font-size: 0.7rem; font-weight: 700; padding: 3px 8px;
+      border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .class-F { background: #7c3aed22; color: #a78bfa; border: 1px solid #7c3aed44; }
+    .class-E { background: #1d4ed822; color: #60a5fa; border: 1px solid #1d4ed844; }
+    .class-D { background: #0f766e22; color: #34d399; border: 1px solid #0f766e44; }
+    .class-C { background: #71717a22; color: #a1a1aa; border: 1px solid #71717a44; }
+
+    .apt-name { font-size: 0.95rem; font-weight: 700; color: var(--text); margin-top: 6px; }
+    .apt-location { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+
+    .apt-body { flex: 1; overflow-y: auto; padding: 14px 16px; }
+
+    .apt-stat-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0; border-bottom: 1px solid var(--border);
+      font-size: 0.82rem;
+    }
+    .apt-stat-row:last-child { border-bottom: none; }
+    .apt-stat-key { color: var(--text-muted); }
+    .apt-stat-val { color: var(--text); font-weight: 600; }
+
+    .apt-actions { padding: 14px 16px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+    .apt-btn {
+      width: 100%; padding: 10px; border-radius: 7px;
+      border: 1px solid var(--border); background: var(--bg-card);
+      color: var(--text); font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; transition: var(--transition); text-align: center;
+    }
+    .apt-btn:hover { background: var(--bg-hover); border-color: var(--border-light); }
+    .apt-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .apt-btn.primary:hover { background: #2589f0; }
+
+    .close-btn {
+      width: 28px; height: 28px; border-radius: 6px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text-muted); cursor: pointer; font-size: 1rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: var(--transition); flex-shrink: 0;
+    }
+    .close-btn:hover { background: var(--bg-hover); color: var(--text); }
+
+    /* ─── CARDS IN LEFT PANEL ─── */
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px; margin-bottom: 10px;
+    }
+    .card-title {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 8px;
+    }
+    .card-row {
+      display: flex; justify-content: space-between;
+      font-size: 0.82rem; margin-bottom: 4px;
+    }
+    .card-row span:first-child { color: var(--text-muted); }
+    .card-row span:last-child  { color: var(--text); font-weight: 600; }
+    .card-row.profit  span:last-child { color: var(--success); }
+    .card-row.loss    span:last-child { color: var(--danger); }
+
+    .fleet-item, .route-item {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;
+      cursor: pointer; transition: var(--transition);
+    }
+    .fleet-item:hover, .route-item:hover { border-color: var(--border-light); background: var(--bg-hover); }
+
+    .fleet-tail { font-size: 0.85rem; font-weight: 700; color: var(--text); }
+    .fleet-model { font-size: 0.75rem; color: var(--text-muted); }
+    .fleet-bar-wrap { height: 3px; background: var(--border); border-radius: 2px; margin-top: 8px; }
+    .fleet-bar { height: 100%; border-radius: 2px; background: var(--success); }
+    .fleet-bar.warn  { background: var(--warning); }
+    .fleet-bar.crit  { background: var(--danger); }
+
+    .route-code { font-size: 0.9rem; font-weight: 800; color: var(--text); }
+    .route-meta { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+    .route-occ  { font-size: 0.75rem; color: var(--success); font-weight: 600; margin-top: 4px; }
+
+    .empty-state {
+      text-align: center; padding: 30px 10px;
+      color: var(--text-muted); font-size: 0.82rem; line-height: 1.6;
+    }
+    .empty-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+
+    .section-btn {
+      width: 100%; padding: 9px; border-radius: 7px;
+      border: 1px solid var(--accent); background: transparent;
+      color: var(--accent); font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; transition: var(--transition); margin-top: 4px;
+    }
+    .section-btn:hover { background: var(--accent); color: #fff; }
+
+    /* ─── ECONOMY PANEL (bottom drawer) ─── */
+    #panel-economy {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      height: 220px;
+      background: var(--bg-panel);
+      border-top: 1px solid var(--border);
+      transform: translateY(100%);
+      transition: transform var(--transition);
+      z-index: 1000;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    }
+    #panel-economy.open { transform: translateY(0); }
+
+    .eco-block {
+      padding: 20px 18px;
+      border-right: 1px solid var(--border);
+    }
+    .eco-block:last-child { border-right: none; }
+    .eco-block h4 {
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.8px;
+      color: var(--text-muted); margin-bottom: 16px;
+    }
+    .eco-val {
+      font-size: 1.5rem; font-weight: 900; color: var(--text); line-height: 1;
+    }
+    .eco-val.green  { color: var(--success); }
+    .eco-val.red    { color: var(--danger); }
+    .eco-val.yellow { color: var(--gold); }
+    .eco-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+    .eco-rows { margin-top: 12px; }
+    .eco-row {
+      display: flex; justify-content: space-between;
+      font-size: 0.78rem; padding: 3px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .eco-row:last-child { border-bottom: none; }
+    .eco-row span:first-child { color: var(--text-muted); }
+    .eco-row span:last-child  { color: var(--text); font-weight: 600; }
+
+    /* ═══════════════════════════════════════════
+       MODALS
+    ═══════════════════════════════════════════ */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 2000;
+      background: rgba(0,0,0,0.65);
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open,
+    .modal-overlay.active { display: flex; }
+
+    .modal {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 500px; max-width: 95vw;
+      max-height: 90vh;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; justify-content: space-between;
+    }
+    .modal-title { font-size: 1.1rem; font-weight: 700; color: #fff; }
+    .modal-subtitle { font-size: 0.8rem; color: var(--text-muted); margin-top: 3px; }
+    .modal-body { padding: 20px 24px; flex: 1; overflow-y: auto; }
+    .modal-footer {
+      padding: 14px 24px;
+      border-top: 1px solid var(--border);
+      display: flex; gap: 8px; justify-content: flex-end;
+    }
+
+    /* Event modal */
+    .event-severity {
+      display: inline-block; padding: 3px 10px; border-radius: 4px;
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 12px;
+    }
+    .severity-Critical  { background: #ef444422; color: #f87171; border: 1px solid #ef444444; }
+    .severity-High      { background: #f59e0b22; color: #fbbf24; border: 1px solid #f59e0b44; }
+    .severity-Medium    { background: #3b82f622; color: #60a5fa; border: 1px solid #3b82f644; }
+    .severity-Low       { background: #22c55e22; color: #4ade80; border: 1px solid #22c55e44; }
+
+    .event-description { font-size: 0.88rem; color: var(--text-dim); line-height: 1.65; margin-bottom: 18px; }
+    .event-impact {
+      background: var(--bg-card); border-radius: 8px; padding: 12px 16px;
+      margin-bottom: 18px; display: flex; gap: 24px;
+    }
+    .impact-item { text-align: center; }
+    .impact-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--text-muted); margin-bottom: 3px; }
+    .impact-val { font-size: 1rem; font-weight: 700; }
+    .impact-val.neg { color: var(--danger); }
+    .impact-val.pos { color: var(--success); }
+    .impact-val.neu { color: var(--text-muted); }
+
+    .event-aria {
+      background: #1e3a5f22; border: 1px solid #1e3a5f;
+      border-radius: 8px; padding: 12px 16px;
+      font-size: 0.82rem; color: var(--text-dim); line-height: 1.6;
+      font-style: italic;
+    }
+    .event-aria::before { content: '✈ ARIA: '; color: var(--accent); font-style: normal; font-weight: 600; }
+
+    .resolution-options {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 16px;
+    }
+    .res-btn {
+      padding: 11px 10px; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--bg-card);
+      color: var(--text); font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; transition: var(--transition); text-align: center;
+    }
+    .res-btn:hover { border-color: var(--accent); background: var(--accent-dim); }
+    .res-btn .res-label { display: block; margin-bottom: 3px; }
+    .res-btn .res-meta  { font-size: 0.7rem; color: var(--text-muted); font-weight: 400; }
+
+    /* Monthly Report */
+    .report-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px;
+    }
+    .report-block {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px;
+    }
+    .report-block h4 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.8px;
+      color: var(--text-muted); margin-bottom: 10px; }
+    .report-line { display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 5px; }
+    .report-line span:first-child { color: var(--text-muted); }
+    .report-line span:last-child  { color: var(--text); font-weight: 600; }
+    .report-total {
+      display: flex; justify-content: space-between; padding-top: 8px;
+      border-top: 1px solid var(--border); font-weight: 700; font-size: 0.9rem; margin-top: 8px;
+    }
+    .report-net {
+      text-align: center; padding: 16px;
+      background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border);
+    }
+    .report-net-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 6px; }
+    .report-net-val { font-size: 1.8rem; font-weight: 900; }
+
+    /* Timer bar */
+    #event-timer-wrap { height: 3px; background: var(--border); position: relative; margin-bottom: 14px; }
+    #event-timer-bar  { height: 100%; background: var(--danger); border-radius: 2px;
+      transition: width 0.5s linear; }
+
+    /* ─── TOAST NOTIFICATIONS ─── */
+    #toast-container {
+      position: fixed; bottom: 24px; right: 24px; z-index: 300;
+      display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+    }
+    .toast {
+      padding: 12px 18px; border-radius: 8px;
+      background: var(--bg-panel); border: 1px solid var(--border);
+      font-size: 0.83rem; color: var(--text); max-width: 300px;
+      animation: slideIn 0.3s ease, fadeOut 0.4s ease 3.6s forwards;
+      pointer-events: all;
+    }
+    .toast.success { border-left: 3px solid var(--success); }
+    .toast.warning { border-left: 3px solid var(--warning); }
+    .toast.danger  { border-left: 3px solid var(--danger);  }
+    .toast.info    { border-left: 3px solid var(--accent);  }
+    @keyframes slideIn  { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes fadeOut  { from { opacity: 1; } to { opacity: 0; pointer-events: none; } }
+
+    /* ─── MISC ─── */
+    .rep-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 3px; width: 60px; }
+    .rep-fill { height: 100%; border-radius: 2px; background: var(--gold); transition: width 0.5s; }
+
+    .occ-pill {
+      display: inline-block; padding: 2px 7px; border-radius: 3px;
+      font-size: 0.7rem; font-weight: 700;
+    }
+    .occ-good { background: #22c55e22; color: #4ade80; }
+    .occ-mid  { background: #f59e0b22; color: #fbbf24; }
+    .occ-low  { background: #ef444422; color: #f87171; }
+
+    .no-data { color: var(--text-muted); font-size: 0.82rem; font-style: italic; text-align: center; padding: 20px 0; }
+
+    /* Hub indicator */
+    #hub-tag {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 9px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;
+      background: #22c55e22; color: #4ade80; border: 1px solid #22c55e44;
+      margin-left: 8px;
+    }
+
+    /* ═══════════════════════════════════════════
+       PLANIFICADOR SEMANAL OVERLAY
+    ═══════════════════════════════════════════ */
+    #planner-overlay {
+      display: none; position: fixed; inset: 0; z-index: 500;
+      flex-direction: column; overflow-y: auto;
+      background: var(--bg-dark); padding: 20px 24px; gap: 14px;
+    }
+    #planner-overlay.active { display: flex; }
+
+    .planner-header { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    .planner-title  { font-size: 0.95rem; font-weight: 900; letter-spacing: 2px;
+      text-transform: uppercase; color: #fff; flex: 1; }
+    .planner-close  { padding: 6px 16px; border-radius: 7px;
+      border: 1px solid var(--border-light); background: var(--bg-card);
+      color: var(--text-muted); cursor: pointer; font-size: 0.82rem; transition: var(--transition); }
+    .planner-close:hover { background: var(--bg-hover); color: var(--text); }
+
+    .planner-filters {
+      display: flex; align-items: flex-end; gap: 24px; flex-wrap: wrap;
+      background: var(--bg-panel); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 16px; flex-shrink: 0;
+    }
+    .pf-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 5px; }
+    .pf-row   { display: flex; gap: 7px; align-items: center; }
+    .planner-select, .planner-input {
+      padding: 6px 10px; background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text); font-size: 0.8rem; outline: none;
+      transition: var(--transition);
+    }
+    .planner-select:focus, .planner-input:focus { border-color: var(--accent); }
+    .planner-input { width: 130px; }
+    .pf-radio label { display: flex; align-items: center; gap: 5px;
+      font-size: 0.8rem; color: var(--text-dim); cursor: pointer; margin-bottom: 4px; }
+    .pf-divider { width: 1px; background: var(--border); align-self: stretch; margin: 0 4px; }
+    .pf-icon-btn { width: 28px; height: 28px; border-radius: 6px;
+      border: 1px solid var(--border-light); background: var(--bg-card);
+      color: var(--text-muted); cursor: pointer; font-size: 0.82rem;
+      display: flex; align-items: center; justify-content: center; transition: var(--transition); }
+    .pf-icon-btn:hover { background: var(--bg-hover); color: var(--text); }
+
+    /* Route chips */
+    .planner-chips { display: flex; flex-wrap: wrap; gap: 8px; min-height: 34px; flex-shrink: 0; }
+    .route-chip {
+      display: inline-flex; flex-direction: column; align-items: flex-start; padding: 6px 13px;
+      border-radius: 12px; color: #fff; cursor: grab; user-select: none;
+      border: 2px solid rgba(255,255,255,0.18);
+      transition: transform 0.1s, box-shadow 0.1s; white-space: nowrap;
+    }
+    .route-chip:hover  { transform: scale(1.05); box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+    .route-chip:active { cursor: grabbing; }
+    .route-chip.dragging { opacity: 0.4; transform: scale(0.96); }
+    .chip-route { font-size: 0.76rem; font-weight: 700; }
+    .chip-ac    { font-size: 0.64rem; font-weight: 500; opacity: 0.82; margin-top: 2px; }
+    .chip-ac-warn { color: #fbbf24 !important; opacity: 1 !important; }
+
+    /* Planner fleet section */
+    .planner-fleet {
+      background: var(--bg-panel); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 16px; flex-shrink: 0;
+    }
+    .planner-fleet-title { font-size: 0.65rem; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+    .fleet-cards-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .planner-fc {
+      background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 12px; display: flex; align-items: center; gap: 12px; font-size: 0.73rem;
+    }
+    .pfc-info { display: flex; flex-direction: column; gap: 1px; }
+    .pfc-tail  { font-weight: 800; color: var(--text); font-size: 0.78rem; }
+    .pfc-model { color: var(--text-muted); font-size: 0.66rem; }
+    .pfc-select {
+      background: var(--bg-panel); border: 1px solid var(--border-light); border-radius: 5px;
+      color: var(--text); font-size: 0.7rem; padding: 4px 8px; cursor: pointer;
+      max-width: 150px;
+    }
+    .pfc-select:focus { outline: none; border-color: var(--accent); }
+
+    /* Grid wrap */
+    .planner-grid-wrap {
+      background: var(--bg-panel); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px 18px; overflow-x: auto; flex-shrink: 0;
+    }
+    .pg-topbar { display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px; }
+    .btn-borrar { padding: 8px 18px; border-radius: 7px;
+      background: #c0392b; border: 1px solid #c0392b; color: #fff;
+      font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: var(--transition); }
+    .btn-borrar:hover { background: #e74c3c; }
+
+    /* Grid */
+    .planner-grid { min-width: 680px; }
+    .pg-hours { display: flex; padding-left: 108px; margin-bottom: 3px; }
+    .pg-hour  { flex: 1; text-align: center; font-size: 0.58rem;
+      color: var(--text-muted); min-width: 0; pointer-events: none; }
+    .pg-hour.peak-morn { color: #4ade80; font-weight: 800; }
+    .pg-hour.peak-eve  { color: #fb923c; font-weight: 800; }
+    .pg-legend { display: flex; gap: 14px; padding-left: 108px; margin-top: 6px;
+      font-size: 0.58rem; color: var(--text-muted); }
+    .pg-row   { display: flex; align-items: center; margin-bottom: 4px; }
+    .pg-day-label { width: 108px; flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
+    .pg-day-name  { font-size: 0.78rem; font-weight: 700; color: var(--text); }
+    .pg-copy-btn  { width: 20px; height: 20px; border-radius: 4px;
+      border: 1px solid var(--border-light); background: var(--bg-card);
+      color: var(--text-muted); cursor: pointer; font-size: 0.62rem;
+      display: flex; align-items: center; justify-content: center; transition: var(--transition); }
+    .pg-copy-btn:hover { background: var(--bg-hover); color: var(--text); }
+    .pg-timeline {
+      flex: 1; position: relative; height: 36px;
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px;
+      /* Franjas de horas pico superpuestas sobre la cuadrícula horaria */
+      background-image:
+        /* mañana pico 06:00-10:00 — verde tenue */
+        linear-gradient(90deg, transparent calc(6/24*100%), rgba(34,197,94,0.10) calc(6/24*100%),
+          rgba(34,197,94,0.10) calc(10/24*100%), transparent calc(10/24*100%)),
+        /* tarde pico 17:00-21:00 — naranja tenue */
+        linear-gradient(90deg, transparent calc(17/24*100%), rgba(251,146,60,0.10) calc(17/24*100%),
+          rgba(251,146,60,0.10) calc(21/24*100%), transparent calc(21/24*100%)),
+        /* cuadrícula de horas */
+        repeating-linear-gradient(
+          90deg, transparent, transparent calc(100%/24 - 1px),
+          rgba(255,255,255,0.04) calc(100%/24 - 1px), rgba(255,255,255,0.04) calc(100%/24));
+      transition: border-color 0.15s, background-color 0.15s;
+    }
+    .pg-timeline.drag-over { border-color: var(--accent); background-color: #0d1e3d88; }
+
+    /* Flight blocks — z-index 2 para estar encima de los ghost */
+    .flight-block {
+      position: absolute; top: 3px; height: calc(100% - 6px); z-index: 2;
+      border-radius: 5px; display: flex; align-items: center; overflow: hidden;
+      padding: 0 18px 0 6px; font-size: 0.63rem; font-weight: 700; color: #fff;
+      white-space: nowrap; cursor: grab; user-select: none;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.5); min-width: 2px;
+    }
+    .flight-block:active { cursor: grabbing; }
+    .fb-label { overflow: hidden; text-overflow: ellipsis; pointer-events: none; flex: 1; }
+    .fb-close {
+      position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
+      width: 13px; height: 13px; border-radius: 50%;
+      background: rgba(0,0,0,0.5); display: flex; align-items: center;
+      justify-content: center; font-size: 0.5rem; cursor: pointer; line-height: 1;
+      opacity: 0; transition: opacity 0.15s; flex-shrink: 0;
+    }
+    .flight-block:hover .fb-close { opacity: 1; }
+
+    /* Ghost block: regreso (no interactivo, z-index 1 — debajo de bloques activos) */
+    .flight-block-return {
+      position: absolute; top: 3px; height: calc(100% - 6px); z-index: 1;
+      border-radius: 5px; display: flex; align-items: center; overflow: hidden;
+      padding: 0 4px; font-size: 0.55rem; font-weight: 600;
+      cursor: default; pointer-events: none; box-sizing: border-box; min-width: 2px;
+    }
+
+    .pg-save-row { text-align: center; margin-top: 14px; }
+
+    /* Demand table */
+    .planner-demand {
+      background: var(--bg-panel); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px 18px; flex-shrink: 0;
+    }
+    .demand-title { font-size: 0.7rem; font-weight: 900; text-transform: uppercase;
+      letter-spacing: 1.5px; color: var(--text-dim); margin-bottom: 12px; }
+    .demand-table { width: 100%; border-collapse: collapse; }
+    .demand-table th { font-size: 0.68rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.7px; color: var(--text-muted); padding: 4px 10px; text-align: left; }
+    .demand-table td { padding: 6px 10px; font-size: 0.8rem; font-weight: 700; }
+    .demand-table td.eco  { color: #22c55e; }
+    .demand-table td.bus  { color: #f59e0b; }
+    .demand-table td.prem { color: #a78bfa; }
+    .demand-table tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+    .day-pill { background: #1e3a5f; padding: 2px 10px; border-radius: 10px;
+      font-size: 0.72rem; color: #60a5fa; font-weight: 700; display: inline-block; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 1: MAIN MENU
+═══════════════════════════════════════════════════════════ -->
+<div id="screen-menu" class="screen active">
+  <div class="menu-stars" id="stars"></div>
+
+  <div class="menu-logo">Sky<span>Line</span> ✈</div>
+  <div class="menu-tagline">Airline Management Simulator</div>
+
+  <button class="menu-btn primary" id="btn-newgame">Nueva Partida</button>
+  <button class="menu-btn" id="btn-continue" disabled>Continuar</button>
+  <button class="menu-btn" id="btn-credits" onclick="showToast('SkyLine v0.1 — Portado a HTML desde Unity C#', 'info')">Créditos</button>
+
+  <div class="menu-version">SkyLine v0.1 — HTML Edition</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 2: NEW GAME SETUP
+═══════════════════════════════════════════════════════════ -->
+<div id="screen-newgame" class="screen">
+  <div class="form-card">
+    <h2>✈ Nueva Aerolínea</h2>
+    <p class="subtitle">Elige el nombre y el modo de juego</p>
+
+    <div class="form-group">
+      <label>Nombre de la Aerolínea</label>
+      <input type="text" id="ng-name" placeholder="ej. SkyLine Air" maxlength="30"
+        oninput="updateIataPreview()" />
+      <div class="iata-preview" id="ng-iata-preview">Código IATA: <span>—</span></div>
+    </div>
+
+    <div class="form-group">
+      <label>Modo de Juego</label>
+      <div class="mode-cards">
+        <div class="mode-card" id="mode-Tycoon" onclick="selectMode('Tycoon')">
+          <div class="mode-icon">⚡</div>
+          <div class="mode-name">Tycoon</div>
+          <div class="mode-desc">Tiempo acelerado 5×<br>Un día de juego = 3.2 h reales</div>
+        </div>
+        <div class="mode-card" id="mode-Realista" onclick="selectMode('Realista')">
+          <div class="mode-icon">🕐</div>
+          <div class="mode-name">Realista</div>
+          <div class="mode-desc">Tiempo real 1:1<br>Los vuelos duran igual que en la vida real</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Hub Principal ✈</label>
+      <div class="ng-hub-wrap">
+        <input type="text" id="ng-hub-input" autocomplete="off"
+          placeholder="Busca ciudad o código IATA (ej. BOG, Miami, London...)"
+          oninput="ngHubSearch(this.value)" onfocus="ngHubSearch(this.value)" />
+        <div id="ng-hub-dropdown" class="ng-hub-dropdown"></div>
+      </div>
+      <div id="ng-hub-badge" class="ng-hub-badge"></div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="showScreen('menu')">← Volver</button>
+      <button class="btn btn-primary" id="btn-start">Comenzar →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 3: GAME
+═══════════════════════════════════════════════════════════ -->
+<div id="screen-game" class="screen">
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-brand">Sky<span>Line</span> ✈ <span id="hub-tags"><span class="hub-chip">HUB</span></span></div>
+
+    <div class="hud-stat">
+      <span class="hud-label">Fecha</span>
+      <span class="hud-value" id="hud-date">01/01/2024</span>
+    </div>
+    <div class="hud-stat">
+      <span class="hud-label">Hora</span>
+      <span class="hud-value" id="hud-time">06:00</span>
+    </div>
+    <div class="hud-stat">
+      <span class="hud-label">Temporada</span>
+      <span class="hud-value season" id="hud-season">Verano</span>
+    </div>
+    <div class="hud-stat">
+      <span class="hud-label">Efectivo</span>
+      <span class="hud-value cash" id="hud-cash">$5,000,000</span>
+    </div>
+    <div class="hud-stat">
+      <span class="hud-label">Reputación</span>
+      <span class="hud-value rep" id="hud-rep">50</span>
+      <div class="rep-bar"><div class="rep-fill" id="hud-rep-bar" style="width:50%"></div></div>
+    </div>
+    <div class="hud-stat">
+      <span class="hud-label">Rutas</span>
+      <span class="hud-value" id="hud-routes">0</span>
+    </div>
+    <div class="hud-stat">
+      <span class="hud-label">Flota</span>
+      <span class="hud-value" id="hud-fleet">0</span>
+    </div>
+
+    <div class="hud-spacer"></div>
+
+    <!-- Speed controls -->
+    <div class="speed-controls">
+      <button class="speed-btn" id="sp-pause" onclick="setSpeed(0)" title="Pausar (Espacio)">⏸</button>
+      <button class="speed-btn active" id="sp-1x" onclick="setSpeed(1)" title="Jugar (Espacio)">▶</button>
+    </div>
+
+    <!-- Panel toggles -->
+    <div class="panel-toggles">
+      <button class="toggle-btn" id="tog-left" onclick="togglePanel('left')">≡ Panel</button>
+      <button class="toggle-btn" id="tog-eco" onclick="togglePanel('eco')">$ Economía</button>
+      <button class="toggle-btn" onclick="saveAndNotify()">💾</button>
+      <button class="toggle-btn" onclick="openPlanner()">📅 Plan</button>
+    </div>
+  </div>
+
+  <!-- Map area -->
+  <div id="map-wrap">
+    <div id="map"></div>
+
+    <!-- Left panel -->
+    <div id="panel-left">
+      <div class="panel-tabs">
+        <div class="panel-tab active" onclick="switchTab('fleet')">✈ Flota</div>
+        <div class="panel-tab" onclick="switchTab('routes')">↔ Rutas</div>
+        <div class="panel-tab" onclick="switchTab('market')">🛒 Mercado</div>
+        <div class="panel-tab" onclick="switchTab('flights')">🕐 Vuelos</div>
+      </div>
+      <div class="panel-body">
+
+        <!-- FLEET TAB -->
+        <div class="panel-section active" id="tab-fleet">
+          <div id="fleet-list"></div>
+          <div id="fleet-empty" class="empty-state">
+            <span class="empty-icon">✈</span>
+            No tienes aviones en tu flota.<br>Ve al Mercado para comprar o arrendar.
+          </div>
+          <button class="section-btn" onclick="switchTab('market')">+ Comprar / Arrendar</button>
+        </div>
+
+        <!-- ROUTES TAB -->
+        <div class="panel-section" id="tab-routes">
+          <div id="route-list"></div>
+          <div id="routes-empty" class="empty-state">
+            <span class="empty-icon">↔</span>
+            No tienes rutas activas.<br>Selecciona un aeropuerto en el mapa para abrir una.
+          </div>
+        </div>
+
+        <!-- MARKET TAB -->
+        <div class="panel-section" id="tab-market">
+          <div id="market-list"></div>
+        </div>
+
+        <!-- FLIGHTS / HORARIO TAB -->
+        <div class="panel-section" id="tab-flights">
+          <div id="flights-day-selector"></div>
+          <div id="flights-list"></div>
+          <div id="flights-empty" class="empty-state">
+            <span class="empty-icon">🕐</span>
+            Sin rutas activas.<br>Crea una ruta para ver el horario de vuelos.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Airport info panel -->
+    <div id="panel-airport">
+      <div class="apt-header">
+        <div>
+          <div class="apt-iata" id="apt-iata">ORD</div>
+          <div class="apt-name" id="apt-name">Chicago O'Hare International</div>
+          <div class="apt-location" id="apt-location">Chicago, United States</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          <button class="close-btn" onclick="closeAirportPanel()">✕</button>
+          <span class="apt-class-badge class-F" id="apt-class">Clase F</span>
+        </div>
+      </div>
+      <div class="apt-body">
+        <div class="apt-stat-row">
+          <span class="apt-stat-key">Posición</span>
+          <span class="apt-stat-val" id="apt-coords">–</span>
+        </div>
+        <div class="apt-stat-row">
+          <span class="apt-stat-key">Región</span>
+          <span class="apt-stat-val" id="apt-region">–</span>
+        </div>
+        <div class="apt-stat-row">
+          <span class="apt-stat-key">Tarifa de Aterrizaje</span>
+          <span class="apt-stat-val" id="apt-fee">–</span>
+        </div>
+        <div class="apt-stat-row">
+          <span class="apt-stat-key">Demanda Base</span>
+          <span class="apt-stat-val" id="apt-demand">–</span>
+        </div>
+        <div class="apt-stat-row">
+          <span class="apt-stat-key">Avión Mínimo</span>
+          <span class="apt-stat-val" id="apt-minplane">–</span>
+        </div>
+        <div class="apt-stat-row">
+          <span class="apt-stat-key">Gate</span>
+          <span class="apt-stat-val" id="apt-gate-status">–</span>
+        </div>
+      </div>
+      <div class="apt-actions">
+        <button class="apt-btn primary" id="apt-btn-gate">Rentar Gate</button>
+        <button class="apt-btn" id="apt-btn-hub">Establecer como Hub</button>
+        <button class="apt-btn" id="apt-btn-route">Nueva Ruta →</button>
+      </div>
+    </div>
+
+    <!-- Economy panel -->
+    <div id="panel-economy">
+      <div class="eco-block">
+        <h4>Efectivo</h4>
+        <div class="eco-val green" id="eco-cash">$5,000,000</div>
+        <div class="eco-sub" id="eco-credit">Credit Score: 700</div>
+        <div class="eco-rows">
+          <div class="eco-row"><span>Gates/mes</span><span id="eco-gates">$0</span></div>
+          <div class="eco-row"><span>Préstamos/mes</span><span id="eco-loans">$0</span></div>
+        </div>
+      </div>
+      <div class="eco-block">
+        <h4>Ingresos (mes)</h4>
+        <div class="eco-val" id="eco-rev">$0</div>
+        <div class="eco-rows">
+          <div class="eco-row"><span>Pasajeros</span><span id="eco-rev-pax">$0</span></div>
+          <div class="eco-row"><span>Subsidiarias</span><span id="eco-rev-sub">$0</span></div>
+          <div class="eco-row"><span>Cargo</span><span id="eco-rev-cargo">$0</span></div>
+        </div>
+      </div>
+      <div class="eco-block">
+        <h4>Costos (mes)</h4>
+        <div class="eco-val red" id="eco-costs">$0</div>
+        <div class="eco-rows">
+          <div class="eco-row"><span>Combustible</span><span id="eco-fuel">$0</span></div>
+          <div class="eco-row"><span>Tripulación</span><span id="eco-crew">$0</span></div>
+          <div class="eco-row"><span>Mantenimiento</span><span id="eco-maint">$0</span></div>
+        </div>
+      </div>
+      <div class="eco-block">
+        <h4>Valoración Empresa</h4>
+        <div class="eco-val yellow" id="eco-val">$0</div>
+        <div class="eco-sub">Valor de empresa</div>
+        <div class="eco-rows">
+          <div class="eco-row"><span>Flota</span><span id="eco-val-fleet">$0</span></div>
+          <div class="eco-row"><span>Deuda total</span><span id="eco-val-debt">$0</span></div>
+          <div class="eco-row"><span>IPO disponible</span><span id="eco-ipo">No</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end map-wrap -->
+</div><!-- end screen-game -->
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL: EVENTO ALEATORIO
+═══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-event">
+  <div class="modal" style="width:520px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="ev-title">Evento</div>
+        <div class="modal-subtitle" id="ev-subtitle"></div>
+      </div>
+      <span class="event-severity severity-Medium" id="ev-severity">Medio</span>
+    </div>
+    <div class="modal-body">
+      <div id="event-timer-wrap"><div id="event-timer-bar" style="width:100%"></div></div>
+      <div class="event-description" id="ev-desc">Descripción del evento...</div>
+      <div class="event-impact">
+        <div class="impact-item">
+          <div class="impact-label">Impacto Cash</div>
+          <div class="impact-val neg" id="ev-cash-impact">-$0</div>
+        </div>
+        <div class="impact-item">
+          <div class="impact-label">Reputación</div>
+          <div class="impact-val" id="ev-rep-impact">0</div>
+        </div>
+        <div class="impact-item">
+          <div class="impact-label">Demanda</div>
+          <div class="impact-val neu" id="ev-demand-impact">0%</div>
+        </div>
+        <div class="impact-item">
+          <div class="impact-label">Duración</div>
+          <div class="impact-val neu" id="ev-duration">0 días</div>
+        </div>
+      </div>
+      <div class="event-aria" id="ev-aria">Sin mensaje.</div>
+      <div class="resolution-options" id="ev-options">
+        <button class="res-btn" onclick="resolveEvent('Accept',0)">
+          <span class="res-label">✓ Aceptar</span>
+          <span class="res-meta">Costo según protocolo</span>
+        </button>
+        <button class="res-btn" onclick="resolveEvent('Negotiate',0)">
+          <span class="res-label">⚖ Negociar</span>
+          <span class="res-meta">40-60% de éxito</span>
+        </button>
+        <button class="res-btn" onclick="resolveEvent('Ignore',0)">
+          <span class="res-label">✗ Ignorar</span>
+          <span class="res-meta">Consecuencias máximas</span>
+        </button>
+        <button class="res-btn" id="ev-insurance-btn" onclick="resolveEvent('Insurance',0)">
+          <span class="res-label">🛡 Seguro</span>
+          <span class="res-meta">50-80% reducción</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL: REPORTE MENSUAL
+═══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-monthly">
+  <div class="modal" style="width:540px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="rep-title">Reporte Mensual</div>
+        <div class="modal-subtitle" id="rep-subtitle">Resumen financiero del mes</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="report-grid">
+        <div class="report-block">
+          <h4>Ingresos</h4>
+          <div class="report-line"><span>Pasajeros</span><span id="rep-rev-pax">$0</span></div>
+          <div class="report-line"><span>Cargo</span><span id="rep-rev-cargo">$0</span></div>
+          <div class="report-line"><span>Subsidiarias</span><span id="rep-rev-sub">$0</span></div>
+          <div class="report-total">
+            <span>Total Ingresos</span>
+            <span id="rep-rev-total" style="color:var(--success)">$0</span>
+          </div>
+        </div>
+        <div class="report-block">
+          <h4>Costos</h4>
+          <div class="report-line"><span>Combustible</span><span id="rep-fuel">$0</span></div>
+          <div class="report-line"><span>Tripulación</span><span id="rep-crew">$0</span></div>
+          <div class="report-line"><span>Mantenimiento</span><span id="rep-maint">$0</span></div>
+          <div class="report-line"><span>Gates</span><span id="rep-gates">$0</span></div>
+          <div class="report-line"><span>Préstamos</span><span id="rep-loans">$0</span></div>
+          <div class="report-line"><span>Impuestos</span><span id="rep-taxes">$0</span></div>
+          <div class="report-total">
+            <span>Total Costos</span>
+            <span id="rep-cost-total" style="color:var(--danger)">$0</span>
+          </div>
+        </div>
+      </div>
+      <div class="report-net">
+        <div class="report-net-label">Resultado Neto del Mes</div>
+        <div class="report-net-val" id="rep-net">$0</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeMonthlyReport()">Continuar →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL: NUEVA RUTA
+═══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-newroute">
+  <div class="modal" style="width:520px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">✈ Nueva Ruta</div>
+        <div class="modal-subtitle" id="nr-subtitle">Selecciona el destino desde tu hub</div>
+      </div>
+      <button class="close-btn" onclick="closeNewRouteModal()">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+
+      <!-- Origen (siempre el hub) → Destino -->
+      <div style="display:flex;align-items:center;gap:10px;background:var(--bg-card);padding:10px 14px;border-radius:8px;border:1px solid var(--border)">
+        <div style="text-align:center;flex:1">
+          <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Hub (Origen)</div>
+          <div id="nr-origin" style="font-size:1.1rem;font-weight:700;color:var(--accent)">ORD</div>
+          <div id="nr-origin-city" style="font-size:0.72rem;color:var(--text-muted)">Chicago</div>
+        </div>
+        <div style="font-size:1.4rem;color:var(--text-muted)">→</div>
+        <div style="text-align:center;flex:1">
+          <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Destino</div>
+          <div id="nr-dest-iata" style="font-size:1.1rem;font-weight:700;color:var(--text)">—</div>
+          <div id="nr-dest-city" style="font-size:0.72rem;color:var(--text-muted)">Sin seleccionar</div>
+        </div>
+      </div>
+
+      <!-- Selector País → Aeropuerto (dos niveles) -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+
+        <!-- PAÍS: Dropdown custom para renderizar banderas correctamente en Windows -->
+        <div>
+          <label style="font-size:0.72rem;color:var(--text-muted);display:block;margin-bottom:4px">🌍 País</label>
+          <div style="position:relative" id="nr-country-wrap">
+            <div id="nr-country-btn" onclick="nrToggleCountryMenu()"
+              style="cursor:pointer;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border);
+                     border-radius:6px;color:var(--text);font-size:0.82rem;display:flex;align-items:center;
+                     gap:8px;user-select:none;min-height:38px">
+              <span id="nr-country-display" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">— Seleccionar país —</span>
+              <span id="nr-country-arrow" style="opacity:0.5;font-size:0.7rem;flex-shrink:0">▾</span>
+            </div>
+            <div id="nr-country-menu"
+              style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;
+                     background:#1e2a3a;border:1px solid var(--border);border-radius:8px;z-index:3100;
+                     box-shadow:0 10px 30px rgba(0,0,0,0.6);overflow:hidden">
+              <div style="padding:8px;border-bottom:1px solid var(--border)">
+                <input type="text" id="nr-country-search" placeholder="Buscar país..."
+                  oninput="nrFilterCountries()"
+                  style="width:100%;padding:6px 10px;background:var(--bg-dark);border:1px solid var(--border);
+                         border-radius:5px;color:var(--text);font-size:0.8rem;box-sizing:border-box"
+                  onclick="event.stopPropagation()">
+              </div>
+              <div id="nr-country-list" style="max-height:220px;overflow-y:auto;padding:4px"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AEROPUERTO: select nativo con buscador encima -->
+        <div>
+          <label style="font-size:0.72rem;color:var(--text-muted);display:block;margin-bottom:4px">✈ Aeropuerto destino *</label>
+          <input type="text" id="nr-apt-search" placeholder="🔍 Filtrar aeropuerto..." oninput="nrFilterAirports()"
+            style="display:none;width:100%;padding:5px 8px;background:var(--bg-card);border:1px solid var(--border);
+                   border-radius:6px 6px 0 0;border-bottom:none;color:var(--text);font-size:0.78rem;box-sizing:border-box" />
+          <select id="nr-dest" onchange="onNrDestChange()"
+            style="width:100%;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.82rem">
+            <option value="">— Selecciona un país primero —</option>
+          </select>
+        </div>
+
+      </div>
+
+      <!-- Aeronave -->
+      <div>
+        <label style="font-size:0.72rem;color:var(--text-muted);display:block;margin-bottom:4px">🛩 Aeronave *</label>
+        <select id="nr-aircraft" onchange="updateNewRouteInfo()"
+          style="width:100%;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.85rem">
+          <option value="">— Seleccionar aeronave —</option>
+        </select>
+      </div>
+
+      <!-- Frecuencia y Tarifa -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label style="font-size:0.72rem;color:var(--text-muted);display:block;margin-bottom:4px">Vuelos / semana</label>
+          <input type="number" id="nr-freq" min="1" max="21" value="7" oninput="updateNewRouteInfo()"
+            style="width:100%;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.85rem" />
+        </div>
+        <div>
+          <label style="font-size:0.72rem;color:var(--text-muted);display:block;margin-bottom:4px">Tarifa Económica ($)</label>
+          <input type="number" id="nr-fare" min="50" max="5000" value="200" oninput="updateNewRouteInfo()"
+            style="width:100%;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.85rem" />
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Info de ruta — FUERA del modal-body para que siempre sea visible sin scroll -->
+    <div id="nr-info"
+      style="padding:10px 20px;background:var(--bg-dark);border-top:1px solid var(--border);
+             font-size:0.78rem;color:var(--text-muted);min-height:42px;line-height:1.7;
+             flex-shrink:0"></div>
+
+    <div class="modal-footer" style="gap:10px">
+      <button class="btn btn-ghost" onclick="closeNewRouteModal()">Cancelar</button>
+      <button id="nr-confirm-btn" class="btn btn-primary" onclick="confirmNewRoute()">Abrir Ruta →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div id="toast-container"></div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PLANIFICADOR SEMANAL OVERLAY
+═══════════════════════════════════════════════════════════ -->
+<div id="planner-overlay">
+
+  <!-- Cabecera -->
+  <div class="planner-header">
+    <div class="planner-title">📅 Planning Semanal</div>
+    <button class="planner-close" onclick="closePlanner()">✕ Cerrar</button>
+  </div>
+
+  <!-- Filtros -->
+  <div class="planner-filters">
+    <div>
+      <div class="pf-label">Filtrar por</div>
+      <div class="pf-row">
+        <select id="pf-dur" class="planner-select" onchange="plannerFilter()">
+          <option value="">Duración</option>
+          <option value="short">Corta (&lt;3h)</option>
+          <option value="medium">Media (3–7h)</option>
+          <option value="long">Larga (&gt;7h)</option>
+        </select>
+        <select id="pf-dist" class="planner-select" onchange="plannerFilter()">
+          <option value="">Distancia</option>
+          <option value="regional">Regional (&lt;2000 km)</option>
+          <option value="continental">Continental (2–7 Mkm)</option>
+          <option value="intercontinental">Intercontinental (&gt;7 Mkm)</option>
+        </select>
+        <input id="pf-search" type="text" placeholder="Búsqueda" class="planner-input" oninput="plannerFilter()" />
+      </div>
+    </div>
+    <div class="pf-divider"></div>
+    <div>
+      <div class="pf-label">Ordenar por</div>
+      <div class="pf-radio">
+        <label><input type="radio" name="psort" value="duration" checked onchange="plannerFilter()"> Duración vuelo</label>
+        <label><input type="radio" name="psort" value="name" onchange="plannerFilter()"> Nombre a..z</label>
+      </div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+      <button class="pf-icon-btn" onclick="closePlanner()" title="Cerrar">✕</button>
+    </div>
+  </div>
+
+  <!-- Chips de rutas -->
+  <div class="planner-chips" id="planner-chips">
+    <span style="color:var(--text-muted);font-size:0.82rem;font-style:italic">
+      Sin rutas activas. Crea una ruta para planificar vuelos.
+    </span>
+  </div>
+
+  <!-- Flota: asignación de aviones a rutas -->
+  <div class="planner-fleet" id="planner-fleet"></div>
+
+  <!-- Cuadrícula -->
+  <div class="planner-grid-wrap">
+    <div class="pg-topbar">
+      <button class="btn-borrar" onclick="clearPlan()">Borrar el planning</button>
+    </div>
+    <div class="planner-grid" id="planner-grid"></div>
+    <div class="pg-save-row">
+      <button class="btn btn-primary" style="padding:12px 40px" onclick="savePlan()">Guardar</button>
+    </div>
+  </div>
+
+  <!-- Demanda restante -->
+  <div class="planner-demand">
+    <div class="demand-title">Demanda Restante</div>
+    <table class="demand-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Clase económica</th>
+          <th>Clase business</th>
+          <th>Primera clase</th>
+        </tr>
+      </thead>
+      <tbody id="demand-tbody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCRIPTS (en orden de dependencia)
+═══════════════════════════════════════════════════════════ -->
+<script src="js/data/models.js?v=41"></script>
+<script src="js/SaveSystem.js?v=2"></script>
+<script src="js/EconomyEngine.js?v=2"></script>
+<script src="js/RouteEngine.js?v=2"></script>
+<script src="js/EventEngine.js?v=2"></script>
+<script src="js/GameManager.js?v=6"></script>
+<script src="js/index.js?v=2"></script>
+
+<!-- UI modules (orden de dependencia) -->
+<script src="js/ui/ui-state.js?v=2"></script>
+<script src="js/ui/ui-hud.js?v=4"></script>
+<script src="js/ui/ui-map.js?v=2"></script>
+<script src="js/ui/ui-airport-panel.js?v=4"></script>
+<script src="js/ui/ui-new-route.js?v=4"></script>
+<script src="js/ui/ui-panels.js?v=6"></script>
+<script src="js/ui/ui-game.js?v=4"></script>
+<script src="js/ui/ui-planner.js?v=3"></script>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  BLOQUE TEMPORAL — eliminar cuando todo esté en ui-*.js
+//  (actualmente vacío; se mantiene por compatibilidad)
+// ═══════════════════════════════════════════════════════════════
+
+</script>
+</body>
+</html>
