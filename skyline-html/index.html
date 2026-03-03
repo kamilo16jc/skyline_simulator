@@ -843,6 +843,120 @@
     .demand-table tr:nth-child(even) { background: rgba(255,255,255,0.02); }
     .day-pill { background: #1e3a5f; padding: 2px 10px; border-radius: 10px;
       font-size: 0.72rem; color: #60a5fa; font-weight: 700; display: inline-block; }
+
+    /* ═══════════════════════════════════════════
+       RESPONSIVE — TABLET (≤ 1024px)
+    ═══════════════════════════════════════════ */
+    @media (max-width: 1024px) {
+      :root { --panel-w: 300px; }
+      #panel-airport { width: 280px; }
+      .hud-stat { padding: 0 10px; }
+    }
+
+    /* ═══════════════════════════════════════════
+       RESPONSIVE — MÓVIL (≤ 640px)
+    ═══════════════════════════════════════════ */
+    @media (max-width: 640px) {
+      /* ── HUD: 2 filas ── */
+      :root { --hud-h: auto; }
+      #hud {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 5px 8px;
+        gap: 0;
+        align-items: center;
+      }
+      .hud-brand {
+        font-size: 0.78rem;
+        padding-right: 8px;
+        border-right: 1px solid var(--border);
+        margin-right: 4px;
+      }
+      /* En móvil: solo mostrar Fecha, Efectivo y Rutas */
+      .hs-hora   { display: none; }
+      .hs-season { display: none; }
+      .hs-rep    { display: none; }
+      .hs-fleet  { display: none; }
+      .hud-stat {
+        padding: 3px 7px;
+        border-right: none;
+      }
+      .hud-value { font-size: 0.8rem; }
+      .hud-label { font-size: 0.55rem; }
+      /* Spacer desaparece, controles de velocidad van a la derecha */
+      .hud-spacer { display: none; }
+      .speed-controls { margin-left: auto; gap: 3px; }
+      .speed-btn { width: 30px; height: 28px; font-size: 0.72rem; }
+      /* Toggles ocupan fila completa */
+      .panel-toggles {
+        width: 100%;
+        margin-left: 0;
+        padding: 5px 0 0 0;
+        border-left: none;
+        border-top: 1px solid var(--border);
+        margin-top: 4px;
+      }
+      .toggle-btn {
+        flex: 1;
+        padding: 0 4px;
+        font-size: 0.68rem;
+        height: 28px;
+      }
+
+      /* ── Paneles full-width ── */
+      #panel-left    { width: 100vw; }
+      #panel-airport { width: 100vw; border-left: none; border-top: 1px solid var(--border); }
+
+      /* ── Panel economía: 2 columnas ── */
+      #panel-economy {
+        grid-template-columns: 1fr 1fr;
+        height: auto;
+        max-height: 55vh;
+        overflow-y: auto;
+      }
+      .eco-block { padding: 12px 10px; border-right: none;
+        border-bottom: 1px solid var(--border); }
+      .eco-val { font-size: 1.1rem; }
+
+      /* ── Planner: scroll horizontal + encogido ── */
+      #planner-overlay { padding: 12px 10px; }
+      .planner-grid-wrap { padding: 10px 8px; }
+      .pg-day-label { width: 72px; font-size: 0.65rem; }
+      .pg-hour { font-size: 0.48rem; }
+      .planner-filters { flex-direction: column; gap: 8px; }
+      .fleet-cards-row { flex-direction: column; }
+
+      /* ── Formulario nueva partida: columna única ── */
+      .form-row { flex-direction: column; }
+      .mode-cards { grid-template-columns: 1fr 1fr; }
+      #screen-newgame .screen-inner { padding: 16px; }
+
+      /* ── Modales más compactos ── */
+      .modal { width: 96vw; max-height: 88vh; }
+      .modal-body { padding: 14px 14px; }
+      .modal-header { padding: 14px 14px 10px; }
+      .modal-title { font-size: 0.95rem; }
+
+      /* ── Tap targets mínimos 44px ── */
+      .speed-btn, .toggle-btn, .panel-tab,
+      .apt-btn, button { min-height: 38px; touch-action: manipulation; }
+
+      /* ── Clusters del mapa: texto más grande ── */
+      .marker-cluster span { font-size: 0.85rem !important; }
+
+      /* ── Screen nueva partida ── */
+      #screen-newgame { padding: 0; }
+      #screen-newgame .screen-inner { max-width: 100%; }
+    }
+
+    /* ═══════════════════════════════════════════
+       RESPONSIVE — MÓVIL PEQUEÑO (≤ 375px)
+    ═══════════════════════════════════════════ */
+    @media (max-width: 375px) {
+      .hud-brand { display: none; }  /* En pantallas muy pequeñas ocultar logo */
+      .hs-routes { display: none; }
+      .toggle-btn { font-size: 0.6rem; }
+    }
   </style>
 </head>
 <body>
@@ -921,32 +1035,32 @@
   <div id="hud">
     <div class="hud-brand">Sky<span>Line</span> ✈ <span id="hub-tags"><span class="hub-chip">HUB</span></span></div>
 
-    <div class="hud-stat">
+    <div class="hud-stat hs-fecha">
       <span class="hud-label">Fecha</span>
       <span class="hud-value" id="hud-date">01/01/2024</span>
     </div>
-    <div class="hud-stat">
+    <div class="hud-stat hs-hora">
       <span class="hud-label">Hora</span>
       <span class="hud-value" id="hud-time">06:00</span>
     </div>
-    <div class="hud-stat">
+    <div class="hud-stat hs-season">
       <span class="hud-label">Temporada</span>
       <span class="hud-value season" id="hud-season">Verano</span>
     </div>
-    <div class="hud-stat">
+    <div class="hud-stat hs-cash">
       <span class="hud-label">Efectivo</span>
       <span class="hud-value cash" id="hud-cash">$5,000,000</span>
     </div>
-    <div class="hud-stat">
+    <div class="hud-stat hs-rep">
       <span class="hud-label">Reputación</span>
       <span class="hud-value rep" id="hud-rep">50</span>
       <div class="rep-bar"><div class="rep-fill" id="hud-rep-bar" style="width:50%"></div></div>
     </div>
-    <div class="hud-stat">
+    <div class="hud-stat hs-routes">
       <span class="hud-label">Rutas</span>
       <span class="hud-value" id="hud-routes">0</span>
     </div>
-    <div class="hud-stat">
+    <div class="hud-stat hs-fleet">
       <span class="hud-label">Flota</span>
       <span class="hud-value" id="hud-fleet">0</span>
     </div>
@@ -1429,7 +1543,7 @@
 <script src="js/ui/ui-new-route.js?v=4"></script>
 <script src="js/ui/ui-panels.js?v=6"></script>
 <script src="js/ui/ui-game.js?v=4"></script>
-<script src="js/ui/ui-planner.js?v=3"></script>
+<script src="js/ui/ui-planner.js?v=4"></script>
 
 <script>
 // ═══════════════════════════════════════════════════════════════

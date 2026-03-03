@@ -187,7 +187,8 @@ function _renderChips() {
     return `<div class="route-chip" style="background:${color}"
       draggable="true"
       ondragstart="plannerChipDragStart(event,'${r.routeId}')"
-      ondragend="plannerDragEnd(event)">
+      ondragend="plannerDragEnd(event)"
+      ontouchstart="plannerChipTouchStart(event,'${r.routeId}')">
       <span class="chip-route">${r.originIATA} / ${r.destinationIATA} &mdash; ${_durationLabel(dur)}</span>
       ${acBadge}
     </div>`;
@@ -337,6 +338,7 @@ function _flightBlockHTML(f, dayIdx, fi) {
     draggable="true"
     ondragstart="plannerBlockDragStart(event,'${f.routeId}',${dayIdx},${fi})"
     ondragend="plannerDragEnd(event)"
+    ontouchstart="plannerBlockTouchStart(event,'${f.routeId}',${dayIdx},${fi})"
     title="${label}">
     <span class="fb-label">${label}</span>
     <div class="fb-close" onclick="removeBlock(event,${dayIdx},${fi})">✕</div>
@@ -565,3 +567,80 @@ function savePlan() {
 function plannerFilter() {
   _renderChips();
 }
+
+// ─────────────────────────────────────────────────────────────
+//  TOUCH DRAG & DROP (soporte móvil)
+// ─────────────────────────────────────────────────────────────
+
+let _touchClone = null;  // elemento visual clonado que sigue el dedo
+
+function plannerChipTouchStart(e, routeId) {
+  e.preventDefault();
+  _dragRouteId   = routeId;
+  _dragSourceDay = null;
+  _dragSourceIdx = null;
+  _createTouchClone(e.currentTarget, e.touches[0]);
+}
+
+function plannerBlockTouchStart(e, routeId, dayIdx, fi) {
+  e.preventDefault();
+  _dragRouteId   = routeId;
+  _dragSourceDay = dayIdx;
+  _dragSourceIdx = fi;
+  _createTouchClone(e.currentTarget, e.touches[0]);
+}
+
+function _createTouchClone(el, touch) {
+  if (_touchClone) _touchClone.remove();
+  _touchClone = el.cloneNode(true);
+  _touchClone.style.cssText = `position:fixed;z-index:9999;opacity:0.85;pointer-events:none;
+    transform:scale(1.05);border-radius:6px;max-width:200px;font-size:0.72rem;`;
+  document.body.appendChild(_touchClone);
+  _moveTouchClone(touch);
+}
+
+function _moveTouchClone(touch) {
+  if (!_touchClone) return;
+  _touchClone.style.left = (touch.clientX - 60) + 'px';
+  _touchClone.style.top  = (touch.clientY - 20) + 'px';
+}
+
+// Listeners globales de touch (se activan solo cuando hay drag activo)
+document.addEventListener('touchmove', e => {
+  if (!_dragRouteId) return;
+  e.preventDefault();
+  const t = e.touches[0];
+  _moveTouchClone(t);
+  // Resaltar el timeline bajo el dedo
+  document.querySelectorAll('.pg-timeline').forEach(tl => tl.classList.remove('drag-over'));
+  const el = document.elementFromPoint(t.clientX, t.clientY);
+  const tl = el?.closest('.pg-timeline');
+  if (tl) tl.classList.add('drag-over');
+}, { passive: false });
+
+document.addEventListener('touchend', e => {
+  if (!_dragRouteId) return;
+  if (_touchClone) { _touchClone.remove(); _touchClone = null; }
+  document.querySelectorAll('.pg-timeline').forEach(tl => tl.classList.remove('drag-over'));
+
+  const t  = e.changedTouches[0];
+  const el = document.elementFromPoint(t.clientX, t.clientY);
+  const tl = el?.closest('.pg-timeline');
+
+  if (tl) {
+    const dayIdx = parseInt(tl.id.replace('ptl-', ''));
+    const rect   = tl.getBoundingClientRect();
+    let depHour  = ((t.clientX - rect.left) / rect.width) * 24;
+    depHour = Math.round(depHour * 2) / 2;
+    depHour = Math.max(0, Math.min(23.5, depHour));
+
+    if (_dragSourceDay !== null && _dragSourceIdx !== null) {
+      _plan[_dragSourceDay].splice(_dragSourceIdx, 1);
+    }
+    _plan[dayIdx].push({ routeId: _dragRouteId, depHour });
+    _renderGrid();
+    _renderDemand();
+  }
+
+  _dragRouteId = _dragSourceDay = _dragSourceIdx = null;
+});
